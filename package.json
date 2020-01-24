@@ -12,7 +12,7 @@
   "scripts": {
     "test": "jest --env=node --ci",
     "build": "rimraf dist && tsc -p .",
-    "publishit": "npm publish --access public"
+    "publishit": "yarn build && yarn test && npm publish --access public"
   },
   "dependencies": {
     "encoding-down": "6.3.0",

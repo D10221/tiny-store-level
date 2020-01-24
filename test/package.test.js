@@ -8,14 +8,33 @@ function newid() {
     .randomBytes(20)
     .toString("hex");
 }
-describe("resolve package", () => {
+/**
+ *
+ * @param {[string, {}][]} values
+ * @returns {{id: string }[]}
+ */
+function mapIDs(values) {
+  return values.map(([id, value]) => ({ id, ...value }));
+}
+
+describe("Tiny Store Level", () => {
   it("works", async () => {
     const db = await MemDb();
-    const store = await createStore(db, "stuff");
+    const stuff = await createStore(db, "stuff");
     const id = newid();
-    await store.add( id, { hello: "world" });    
-    const x = await store.findOne(id);
+    await stuff.add(id, { hello: "world" });
+    const x = await stuff.findOne(id);
     expect(x).toEqual({ hello: "world" });
-    await db.close();// 13ms
+
+    const many = await stuff
+      .findMany()
+      // map Results
+      .then(mapIDs);
+
+    expect(
+      many.find(x => x.id === id), // filter, find ...etc
+    ).toEqual({ hello: "world", id });
+
+    await db.close(); // 13ms
   });
 });
