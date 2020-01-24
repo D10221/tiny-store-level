@@ -2,7 +2,7 @@ import { randomBytes } from "crypto";
 import { existsSync, unlinkSync } from "fs";
 import path from "path";
 import rimraf from "rimraf";
-import levelStore, { JsonDb, LevelDB, MemDb } from "../src";
+import levelStore, { LevelDB, MemDb } from "../src";
 import { toDate } from "../src/dates";
 import { SchemaError } from "../src/schema-error";
 import { Store } from "../src/types";
@@ -21,7 +21,6 @@ let memStore: Store<Thing>;
 if (existsSync(jsonDbPath)) {
   unlinkSync(jsonDbPath);
 }
-let jsonDB: any = JsonDb(jsonDbPath);
 let leveldb: any;
 const leveldbpath = "./testdb";
 beforeAll(() => {
@@ -31,7 +30,7 @@ beforeAll(() => {
 beforeEach(async () => {
   if (memDB) {
     await memDB.close();
-    memDB = null;
+    memDB = null as any;
   }
   memDB = MemDb()
   memStore = await levelStore<Thing>(memDB, "things");
@@ -67,35 +66,7 @@ it("maps out", async () => {
   const x = await bt.findOne("x");
   expect(x.id).toBe("x");
 });
-it("persisted/json-db", async () => {
-  const store = (await levelStore(jsonDB, "moreThings2"));
-  const value = { name: "aaa" };
-  expect(await store.add("a", value)).toBe(undefined);
-  // await jsonDB.close();  
-  const dbFile = require(jsonDbPath);
-  expect(dbFile["things/a"]).toBe(undefined);
-  expect(dbFile["moreThings/a"]).toBe(undefined);
-  expect(dbFile["moreThings2/a"]).toBe(JSON.stringify(value));
-})
-it("validates: 1000/jsons", async () => {
-  // 1089ms with memdown
-  // jest.setTimeout(60000);
-  const s = await levelStore<Thing>(jsonDB, "things2", [
-    { key: "name", notNull: true, unique: true },
-  ]);
-  // 10000 records with 40.202s with jsonDown
-  for (let i = 0; i < 1000; i++) {
-    await s.add(`indexed${i}`, { name: `x${i}` });
-  }
-  expect(await s.add("y", { name: null }).catch(err => err))
-    .toBeInstanceOf(SchemaError);
 
-  expect(
-    await s.add("y1", { name: undefined }).catch(err => err),
-  ).toBeInstanceOf(SchemaError);
-
-  expect(await s.add("xxxx", { name: "x0" }).catch(error => error)).toBeInstanceOf(SchemaError);
-});
 it("10000's", async () => {
   // 1089ms with memdown
   // 1575ms with leveldown
@@ -129,14 +100,14 @@ it("rejects bad id", async () => {
   expect(await store.add("_%$#@", {}).catch(x => x)).toBeInstanceOf(KeyError);
 })
 it("Schema rejects not in schema", async () => {
-  const store = await levelStore<Thing>(jsonDB, "things4", [
+  const store = await levelStore<Thing>(memDB, "things4", [
     { key: "name", notNull: true, unique: true },
   ]);
   const x = await store.add("a", { x: "aaa" } as any).catch(e => e);
   expect(x).toBeInstanceOf(SchemaError)
 })
 it("Schema rejects bad type", async () => {
-  const store = await levelStore<Thing>(jsonDB, "things5", [
+  const store = await levelStore<Thing>(memDB, "things5", [
     { key: "name", notNull: true, unique: true, type: "string" },
   ]);
   const e = await store.add("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", { name: 1 as any }).catch(e => e);
@@ -145,7 +116,7 @@ it("Schema rejects bad type", async () => {
 })
 const randomString = () => randomBytes(16).toString("hex");
 it("Schema rejects bad types", async () => {
-  const store = await levelStore<Thing>(jsonDB, "things6", [
+  const store = await levelStore<Thing>(memDB, "things6", [
     { key: "name", notNull: true, unique: true, type: ["string", "number"] },
   ]);
   expect(await store.add(randomBytes(16).toString("hex"), { name: true as any }).catch(e => e))
@@ -155,19 +126,19 @@ it("Schema rejects bad types", async () => {
 })
 it("defaults values", async () => {
   const newName = randomString();
-  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things7", [
+  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(memDB, "things7", [
     { key: "name", notNull: true, unique: true, type: "string", default: () => newName },
     { key: "createdAt", default: () => new Date() },
   ]);
   const id = randomString();
-  await store.add(id, { name: null });
+  await store.add(id, { name: null as any});
   const found = await store.findOne(id);
   expect(found.name).toBe(newName);
   expect(toDate(found.createdAt).getDate()).toBe(new Date().getDate());
 })
 
 it("updates same value", async () => {
-  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things9", [
+  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(memDB, "things9", [
     { key: "name", notNull: true, unique: true, type: "string" },
     { key: "createdAt", default: () => new Date() },
   ]);
@@ -180,7 +151,7 @@ it("updates same value", async () => {
   }
 })
 it("updates other value", async () => {
-  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things10", [
+  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(memDB, "things10", [
     { key: "name", notNull: true, unique: true, type: "string" },
     { key: "createdAt", default: () => new Date() },
   ]);
@@ -195,7 +166,7 @@ it("updates other value", async () => {
 })
 
 it("updates not dup name", async () => {
-  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things11", [
+  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(memDB, "things11", [
     { key: "name", notNull: true, unique: true, type: "string" },
     { key: "createdAt", default: () => new Date() },
   ]);
@@ -210,7 +181,7 @@ it("updates not dup name", async () => {
 })
 
 it("updates checking type", async () => {
-  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things12", [
+  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(memDB, "things12", [
     { key: "name", notNull: true, unique: true, type: "string" }
   ]);
   const id = randomString();
@@ -219,7 +190,7 @@ it("updates checking type", async () => {
 })
 
 it("deletes and clears indexes", async () => {
-  const store = await levelStore<{ name: string }>(jsonDB, "things13", [
+  const store = await levelStore<{ name: string }>(memDB, "things13", [
     { key: "name", notNull: true, unique: true, type: "string" }
   ]);
   const id = randomString();
