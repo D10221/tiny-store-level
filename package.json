@@ -1,0 +1,41 @@
+{
+  "name": "@d10221/tiny-store-level",
+  "version": "1.0.0-beta.1",
+  "description": "tiny-store level-db implementaion of Store<T>",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "MIT",
+  "private": false,
+  "author": "d10221@protonmail.com",
+  "scripts": {
+    "test": "jest --env=node --ci",
+    "build": "rimraf dist && tsc -p .",
+    "publishit": "npm publish --access public"
+  },
+  "dependencies": {
+    "@australis/tiny-sql-simple-repo": "^1.0.0-22",
+    "@types/abstract-leveldown": "^5.0.1",
+    "@types/mkdirp": "^0.5.2",
+    "encoding-down": "^5.0.4",
+    "jsondown": "^1.0.0",
+    "leveldown": "^4.0.1",
+    "levelup": "^3.1.1",
+    "memdown": "^3.0.0",
+    "mkdirp": "^0.5.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^23.3.9",
+    "@types/mongoose": "^5.3.2",
+    "@types/rimraf": "^2.0.2",
+    "@types/tedious": "^2.6.1",
+    "jest": "23.6.0",
+    "rimraf": "^2.6.2",
+    "ts-jest": "23.10.4",
+    "ts-node": "^7.0.1",
+    "typescript": "3.2.1"
+  },
+  "files": [
+    "dist",
+    "src"    
+  ]
+}
