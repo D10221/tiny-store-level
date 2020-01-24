@@ -54,7 +54,7 @@ export default <T extends { [key: string]: any }>(
       (out, key) => {
         if (!inSchema(key))
           throw new SchemaError(`${key} Not in ${schemaName}`);
-        const schema = schemas.find(x => x.key === key);
+        const schema = schemas.find(x => x.key === key)!;
 
         const value = !isNull(data[schema.key])
           ? data[schema.key]
@@ -73,7 +73,9 @@ export default <T extends { [key: string]: any }>(
           );
         }
         if (schema.unique && indexes && indexes.length) {
-          const { values } = indexes.find(x => x.key === key);
+          const index = indexes.find(x => x.key === key);
+          if(!index) throw new Error("Missing index: " + key);
+          const { values } = index;
           const prev = values && values.indexOf(value) !== -1;
           if (prev) {
             if(!ignore || value !== ignore[key])

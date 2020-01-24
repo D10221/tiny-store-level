@@ -193,7 +193,7 @@ export default async <T extends { [key: string]: any } = {}>(
         ? Promise.reject(new KeyError(`Key '${id}' Not Found`))
         : Promise.reject(e)),
     /** */
-    async remove(id?: string): Promise<any> {
+    async remove(id: string): Promise<any> {
       await findOne(id); //throws
       return db.del(encode(id)).then(removePrimaryKey(id)).then(reindex());
     },
