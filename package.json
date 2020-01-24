@@ -13,7 +13,6 @@
     "publishit": "npm publish --access public"
   },
   "dependencies": {
-    "@australis/tiny-sql-simple-repo": "^1.0.0-22",
     "@types/abstract-leveldown": "^5.0.1",
     "@types/mkdirp": "^0.5.2",
     "encoding-down": "^5.0.4",
