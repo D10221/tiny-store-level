@@ -19,12 +19,10 @@
     "jsondown": "1.0.0",
     "leveldown": "5.4.1",
     "levelup": "4.3.2",
-    "memdown": "5.1.0",
-    "mkdirp": "0.5.1"
+    "memdown": "5.1.0"
   },
   "devDependencies": {
     "@types/abstract-leveldown": "5.0.1",
-    "@types/mkdirp": "0.5.2",
     "@types/jest": "24.9.1",
     "@types/mongoose": "5.5.43",
     "@types/rimraf": "2.0.3",
