@@ -1,15 +1,13 @@
 import { keyEncoder } from "./key-encoder";
-import schema, { Schema } from "./schema";
-import { StoreRecord, Store } from "./types";
+import schema from "./schema";
+import { Schema, Store, StoreRecord } from "./types";
 /** */
 function isNotFoundError(error: Error) {
-  return error instanceof (Error) && error.name === "NotFoundError";
+  return error instanceof Error && error.name === "NotFoundError";
 }
 /** */
 const catchNotFound = (returns: any = null) => (error: Error) => {
-  return isNotFoundError(error)
-    ? returns
-    : Promise.reject(error);
+  return isNotFoundError(error) ? returns : Promise.reject(error);
 };
 
 interface LevelLike {
@@ -34,18 +32,15 @@ export class KeyError extends Error {
     super(message);
   }
 }
-export const cache = () => {
-
-}
+export const cache = () => {};
 /**
  *
  */
-export default async <T extends { [key: string]: any } = {}>(
+const createStore = async <T extends { [key: string]: any } = {}>(
   db: LevelLike,
   partitionName: string,
-  schemas: Schema<T>[] = []
+  schemas: Schema<T>[] = [],
 ): Promise<Store<T>> => {
-
   const { encode, decode, isMatch } = keyEncoder(partitionName);
   const getKeys = () =>
     new Promise<string[]>((resolve, reject) => {
@@ -69,8 +64,7 @@ export default async <T extends { [key: string]: any } = {}>(
       }
     });
 
-  const findOne = (id: string): Promise<T> =>
-    db.get(encode(id)).then((value: any) => value);
+  const findOne = (id: string): Promise<T> => db.get(encode(id)); // .then((value: any) => value);
 
   const findMany = () =>
     new Promise<StoreRecord<T>[]>((resolve, reject) => {
@@ -98,7 +92,10 @@ export default async <T extends { [key: string]: any } = {}>(
   const uniqueIndex = (ignore?: (keyof T)[]) =>
     Promise.all(
       schemas
-        .filter(schema => schema.unique && (!ignore || ignore.indexOf(schema.key) === -1))
+        .filter(
+          schema =>
+            schema.unique && (!ignore || ignore.indexOf(schema.key) === -1),
+        )
         .map(({ key }) =>
           findMany()
             .then(x => x.map(([_id, value]) => value[key]))
@@ -145,7 +142,7 @@ export default async <T extends { [key: string]: any } = {}>(
   /** forcing alphanumeric will enable easier gt & lt and reserved keys like $index? */
   const isValidPrimaryKey = (x: any) => {
     return typeof x === "string" && /^[a-zA-Z0-9]*$/.test(x);
-  }
+  };
 
   const _schema = schema(schemas, partitionName);
 
@@ -153,8 +150,10 @@ export default async <T extends { [key: string]: any } = {}>(
     /** */
     add: async (id: string, data: T) => {
       // Unique PRI-KEY
-      if (primaryKeys.indexOf(id) !== -1) return Promise.reject(new KeyError(`Duplicated key: ${id}`));
-      if (!isValidPrimaryKey(id)) return Promise.reject(new KeyError(`Invalid key: ${id}`));
+      if (primaryKeys.indexOf(id) !== -1)
+        return Promise.reject(new KeyError(`Duplicated key: ${id}`));
+      if (!isValidPrimaryKey(id))
+        return Promise.reject(new KeyError(`Invalid key: ${id}`));
       try {
         // Validate Schema: Warning: adds default values
         data = _schema.validate(data, indexes);
@@ -188,14 +187,19 @@ export default async <T extends { [key: string]: any } = {}>(
       );
     },
     findMany,
-    findOne: (id: string) => findOne(id).catch(e =>
-      isNotFoundError(e)
-        ? Promise.reject(new KeyError(`Key '${id}' Not Found`))
-        : Promise.reject(e)),
+    findOne: (id: string) =>
+      findOne(id).catch(e =>
+        isNotFoundError(e)
+          ? Promise.reject(new KeyError(`Key '${id}' Not Found`))
+          : Promise.reject(e),
+      ),
     /** */
     async remove(id: string): Promise<any> {
       await findOne(id); //throws
-      return db.del(encode(id)).then(removePrimaryKey(id)).then(reindex());
+      return db
+        .del(encode(id))
+        .then(removePrimaryKey(id))
+        .then(reindex());
     },
     /** */
     clear: () =>
@@ -219,8 +223,10 @@ export default async <T extends { [key: string]: any } = {}>(
         } catch (error) {
           return reject(error);
         }
-      }).then(clearPrimaryKeys()).then(reindex()),
+      })
+        .then(clearPrimaryKeys())
+        .then(reindex()),
   };
 };
-
-
+export type CreateStore = typeof createStore;
+export default createStore;

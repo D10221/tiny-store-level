@@ -1,16 +1,6 @@
 import { SchemaError } from "./schema-error";
 import { isArray } from "util";
-
-export type Schema<T> = {
-  key: keyof T;
-  notNull?: boolean | undefined;
-  unique?: boolean | undefined;
-  default?: any | undefined;
-  /**
-   * whatever returns typeof
-   */
-  type?: string | string[];
-};
+import { Schema } from "./types";
 
 const isNull = (x: any): boolean => x === null || x === undefined;
 
@@ -45,10 +35,14 @@ export default <T extends { [key: string]: any }>(
     return keys.concat(other.filter(x => keys.indexOf(x) === -1));
   }
 
-  const validate = (data: T, indexes: { key: keyof T; values: any[] }[], ignore?: Partial<T>) => {
+  const validate = (
+    data: T,
+    indexes: { key: keyof T; values: any[] }[],
+    ignore?: Partial<T>,
+  ) => {
     if (!schemaKeys.length) return data;
 
-    const keys = concat((Object.keys(data) as (keyof T)[]), schemaKeys);
+    const keys = concat(Object.keys(data) as (keyof T)[], schemaKeys);
 
     return keys.reduce(
       (out, key) => {
@@ -67,26 +61,26 @@ export default <T extends { [key: string]: any }>(
         // can't check null, if can't be null, should be checked before
         if (!isNull(value) && !isValidType(schema, value)) {
           throw new SchemaError(
-            `${schemaName}: '${schema.key}' expected Type '${
-            arrify(schema.type).join("|")
-            }' got '${typeof value}'`,
+            `${schemaName}: '${schema.key}' expected Type '${arrify(
+              schema.type,
+            ).join("|")}' got '${typeof value}'`,
           );
         }
         if (schema.unique && indexes && indexes.length) {
           const index = indexes.find(x => x.key === key);
-          if(!index) throw new Error("Missing index: " + key);
+          if (!index) throw new Error("Missing index: " + key);
           const { values } = index;
           const prev = values && values.indexOf(value) !== -1;
           if (prev) {
-            if(!ignore || value !== ignore[key])
-            throw new SchemaError(`${schemaName}: '${key}' 'Must be unique'`);
-          }          
+            if (!ignore || value !== ignore[key])
+              throw new SchemaError(`${schemaName}: '${key}' 'Must be unique'`);
+          }
         }
 
         out[key] = value;
         return out;
       },
-      { ...data as any},
+      { ...(data as any) },
     );
   };
 
