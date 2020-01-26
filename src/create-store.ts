@@ -82,7 +82,7 @@ const createStore = async <T extends { [key: string]: any } = {}>(
   partitionName: string,
   schemas: Schema<T>[] = [],
 ): Promise<Store<T>> => {
-  const { encode, decode, isMatch } = keyEncoder(partitionName);
+  const { encode } = keyEncoder(partitionName);
 
   const _schema = schema(schemas, partitionName);
 

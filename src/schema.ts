@@ -105,6 +105,6 @@ export default <T extends { [key: string]: any }>(
 
   return {
     validate,
-    applyDefaultValues
+    applyDefaultValues,
   };
 };

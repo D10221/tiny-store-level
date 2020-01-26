@@ -11,8 +11,9 @@
   "homepage": "https://github.com/D10221/tiny-store-level",
   "scripts": {
     "test": "jest --env=node --ci",
+    "pretty": "prettier src**/*.*  test/**/* *.json *.js *.md --write",
     "build": "rimraf dist && tsc -p .",
-    "publishit": "yarn build && yarn test && npm publish --access public"
+    "prepublish": "yarn build && yarn test && yarn pretty"
   },
   "dependencies": {
     "encoding-down": "6.3.0",

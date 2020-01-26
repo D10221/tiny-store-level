@@ -47,7 +47,6 @@ describe("Level Store", () => {
   });
 
   it("10000's", async () => {
-
     // 1089ms, 950ms with memdown
     // 1575ms with leveldown
     // 40s with jsondown
@@ -77,12 +76,12 @@ describe("Level Store", () => {
     const x = await store.add(id, {}).catch(e => e);
     expect(x).toBeInstanceOf(KeyError);
   });
-  
+
   it("rejects bad id", async () => {
     const store = await createStore<{}>(db, "things3");
     expect(await store.add("_%$#@", {}).catch(x => x)).toBeInstanceOf(KeyError);
   });
-  
+
   it("Schema rejects not in schema", async () => {
     const store = await createStore<Thing>(db, "things4", [
       { key: "name", notNull: true, unique: true },
@@ -90,7 +89,7 @@ describe("Level Store", () => {
     const x = await store.add("a", { x: "aaa" } as any).catch(e => e);
     expect(x).toBeInstanceOf(SchemaError);
   });
-  
+
   it("Schema rejects bad type", async () => {
     const store = await createStore<Thing>(db, "things5", [
       { key: "name", notNull: true, unique: true, type: "string" },
@@ -100,7 +99,7 @@ describe("Level Store", () => {
       .catch(e => e);
     expect(e).toBeInstanceOf(SchemaError);
   });
-  
+
   it("Schema rejects bad types", async () => {
     const store = await createStore<Thing>(db, "things6", [
       { key: "name", notNull: true, unique: true, type: ["string", "number"] },
@@ -116,7 +115,7 @@ describe("Level Store", () => {
 
   it("defaults values", async () => {
     const newName = randomString();
-    
+
     const store = await createStore<{
       name: string;
       createdAt?: string | number | Date | undefined;
