@@ -1,13 +1,13 @@
-import { SchemaError } from "./schema-error";
-import { isArray } from "util";
-import { Schema } from "./types";
+import SchemaError from "./schema-error";
+import { Schema, StoreRecord } from "./types";
 
-const isNull = (x: any): boolean => x === null || x === undefined;
+const isNullOrUndefined = (x: any): boolean => x === null || x === undefined;
+const hasValue = (x: any) => !isNullOrUndefined(x);
 
 const isFunction = (x: any) => typeof x === "function";
 
 const arrify = <T>(x: T | T[]): T[] => {
-  return isNull(x) ? [] : isArray(x) ? x : [x];
+  return isNullOrUndefined(x) ? [] : Array.isArray(x) ? x : [x];
 };
 
 /**
@@ -35,56 +35,76 @@ export default <T extends { [key: string]: any }>(
     return keys.concat(other.filter(x => keys.indexOf(x) === -1));
   }
 
-  const validate = (
-    data: T,
-    indexes: { key: keyof T; values: any[] }[],
-    ignore?: Partial<T>,
-  ) => {
-    if (!schemaKeys.length) return data;
+  const validate = async (
+    record: [string, Partial<T> | T], // Record
+    findMany: () => Promise<StoreRecord<T>[]>,
+  ): Promise<void> => {
+    if (!schemaKeys.length) return;
 
-    const keys = concat(Object.keys(data) as (keyof T)[], schemaKeys);
+    const [key, data] = record;
 
-    return keys.reduce(
-      (out, key) => {
-        if (!inSchema(key))
-          throw new SchemaError(`${key} Not in ${schemaName}`);
-        const schema = schemas.find(x => x.key === key)!;
+    const dataKeys = concat(Object.keys(data) as (keyof T)[], schemaKeys);
 
-        const value = !isNull(data[schema.key])
-          ? data[schema.key]
-          : defaultValue(schema);
+    for (const dataKey of dataKeys) {
+      if (!inSchema(dataKey))
+        return Promise.reject(
+          new SchemaError(`${dataKey} Not in ${schemaName}`),
+        );
 
-        if (schema.notNull && isNull(value))
-          throw new SchemaError(
-            `${schemaName}: '${schema.key}' cannot be null`,
-          );
-        // can't check null, if can't be null, should be checked before
-        if (!isNull(value) && !isValidType(schema, value)) {
-          throw new SchemaError(
+      const schema = schemas.find(x => x.key === dataKey)!;
+
+      if (schema.notNull && isNullOrUndefined(data[schema.key]))
+        return Promise.reject(
+          new SchemaError(`${schemaName}: '${schema.key}' cannot be null`),
+        );
+
+      // can't check null, if can't be null, should be checked before
+      if (
+        hasValue(data[schema.key]) &&
+        !isValidType(schema, data[schema.key])
+      ) {
+        return Promise.reject(
+          new SchemaError(
             `${schemaName}: '${schema.key}' expected Type '${arrify(
               schema.type,
-            ).join("|")}' got '${typeof value}'`,
+            ).join("|")}' got '${typeof data[schema.key]}'`,
+          ),
+        );
+      }
+
+      if (schema.unique) {
+        const records = await findMany();
+        const prev = records.find(([index, record]) => {
+          return index !== key && record[dataKey] === data[schema.key];
+        });
+        if (prev) {
+          return Promise.reject(
+            new SchemaError(`${schemaName}: '${dataKey}' 'Must be unique'`),
           );
         }
-        if (schema.unique && indexes && indexes.length) {
-          const index = indexes.find(x => x.key === key);
-          if (!index) throw new Error("Missing index: " + key);
-          const { values } = index;
-          const prev = values && values.indexOf(value) !== -1;
-          if (prev) {
-            if (!ignore || value !== ignore[key])
-              throw new SchemaError(`${schemaName}: '${key}' 'Must be unique'`);
-          }
-        }
+      }
+    }
+  };
 
-        out[key] = value;
-        return out;
-      },
-      { ...(data as any) },
-    );
+  const applyDefaultValues = (
+    data: Partial<T> | T, // Record
+  ): Partial<T> | T => {
+    if (!schemaKeys.length) return data;
+    let out: Partial<T> = {};
+    for (const key of schemaKeys) {
+      const schema = schemas.find(x => x.key === key);
+      if (schema && isNullOrUndefined(data[schema.key])) {
+        out[schema.key] = defaultValue(schema);
+      }
+    }
+    return {
+      ...data,
+      ...out,
+    };
   };
 
   return {
     validate,
+    applyDefaultValues
   };
 };

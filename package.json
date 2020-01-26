@@ -23,8 +23,7 @@
   },
   "devDependencies": {
     "@types/abstract-leveldown": "5.0.1",
-    "@types/jest": "24.9.1",
-    "@types/mongoose": "5.5.43",
+    "@types/jest": "24.9.1",   
     "@types/rimraf": "2.0.3",
     "@types/tedious": "4.0.0",
     "jest": "25.1.0",

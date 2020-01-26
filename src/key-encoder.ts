@@ -1,7 +1,9 @@
+import { KeyEncoder } from "./types";
+
 /**
  * Key encoder
  */
-export const keyEncoder = (name: string) => {
+export const keyEncoder = (name: string): KeyEncoder => {
   const regex = new RegExp(`^${name}\/.*`, "i");
   return {
     isMatch(key: Buffer | string) {
