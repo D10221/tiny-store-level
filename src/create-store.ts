@@ -111,9 +111,9 @@ const createStore = async <T extends { [key: string]: any } = {}>(
     /** */
     update: async (id: string, data: Partial<T>) => {
       try {
-        await store.findOne(id); // throw not found
+        const prev = await store.findOne(id); // throw not found
         await _schema.validate([id, data], store.findMany);
-        const ret = await db.put(encode(id), data);
+        const ret = await db.put(encode(id), { ...prev, ...data });
         return ret;
       } catch (error) {
         return Promise.reject(error);
