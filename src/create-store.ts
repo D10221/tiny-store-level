@@ -1,10 +1,11 @@
 import { keyEncoder } from "./key-encoder";
 import schema from "./schema";
-import { Schema, Store, StoreRecord, LevelLike, KeyEncoder } from "./types";
+import { Schema, Store, StoreRecord, KeyEncoder } from "./types";
 import KeyError from "./KeyError";
 import isNotFoundError from "./isNotFoundError";
+import { LevelUp } from "levelup";
 
-const idExists = (db: LevelLike) => async (id: string) => {
+const idExists = (db: LevelUp) => async (id: string) => {
   try {
     await db.get(id);
     return true;
@@ -19,7 +20,7 @@ const isValidPrimaryKey = (x: any) => {
   return typeof x === "string" && /^[a-zA-Z0-9]*$/.test(x);
 };
 
-const findOne = (db: LevelLike) => <T>(encoder: KeyEncoder) => async (
+const findOne = (db: LevelUp) => <T>(encoder: KeyEncoder) => async (
   id: string,
 ): Promise<T> => {
   try {
@@ -30,7 +31,7 @@ const findOne = (db: LevelLike) => <T>(encoder: KeyEncoder) => async (
   }
 };
 
-const findMany = (db: LevelLike) => <T>(enc: KeyEncoder) => () =>
+const findMany = (db: LevelUp) => <T>(enc: KeyEncoder) => () =>
   new Promise<StoreRecord<T>[]>((resolve, reject) => {
     try {
       const stream = db.createReadStream();
@@ -52,7 +53,7 @@ const findMany = (db: LevelLike) => <T>(enc: KeyEncoder) => () =>
     }
   });
 
-const clear = (db: LevelLike) => (enc: KeyEncoder) => () =>
+const clear = (db: LevelUp) => (enc: KeyEncoder) => () =>
   new Promise<any>((resolve, reject) => {
     try {
       const stream = db.createReadStream();
@@ -78,7 +79,7 @@ const clear = (db: LevelLike) => (enc: KeyEncoder) => () =>
  *
  */
 const createStore = async <T extends { [key: string]: any } = {}>(
-  db: LevelLike,
+  db: LevelUp,
   partitionName: string,
   schemas: Schema<T>[] = [],
 ): Promise<Store<T>> => {
