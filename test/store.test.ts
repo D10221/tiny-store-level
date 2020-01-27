@@ -49,7 +49,6 @@ describe("Level Store", () => {
   it("10000's", async () => {
     // 1089ms, 950ms with memdown
     // 1575ms with leveldown
-    // 40s with jsondown
     // jest.setTimeout(60000);
 
     const store = await createStore<Thing>(db, "things3");
@@ -214,6 +213,20 @@ describe("Level Store", () => {
       store.update(id, { name: randomBytes(8) as any }).catch(e => e);
 
     expect(await update()).toBeInstanceOf(SchemaError);
+  });
+
+  it("updates keeps othe values", async () => {
+    const store = await createStore<{ name: string; xyz: string }>(
+      db,
+      "things125",
+    );
+    {
+      const id = randomString();
+      await store.add(id, { name: "bob", xyz: "z" });
+      expect(await store.findOne(id)).toMatchObject({ name: "bob", xyz: "z" });
+      await store.update(id, { xyz: "y" }); // same name
+      expect(await store.findOne(id)).toMatchObject({ name: "bob", xyz: "y" });
+    }
   });
 
   it("is not found error", async () => {

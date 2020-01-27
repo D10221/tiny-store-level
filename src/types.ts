@@ -22,23 +22,23 @@ export type KeyEncoder = {
   isMatch: (s: string | Buffer) => boolean;
 };
 
-export interface LevelLike {
-  createReadStream(o?: {
-    gt?: any;
-    lt?: any;
-    /** @default true */
-    keys?: boolean;
-    /** @default true */
-    values?: boolean;
-    /** @default -1 */
-    limit?: number;
-    reverse?: boolean;
-  }): NodeJS.ReadableStream;
-  get(key: string): Promise<any>;
-  put(key: string, value: any): Promise<any>;
-  del(key: string): Promise<any>;
-  close(): any;
-}
+// export interface LevelLike {
+//   createReadStream(o?: {
+//     gt?: any;
+//     lt?: any;
+//     /** @default true */
+//     keys?: boolean;
+//     /** @default true */
+//     values?: boolean;
+//     /** @default -1 */
+//     limit?: number;
+//     reverse?: boolean;
+//   }): NodeJS.ReadableStream;
+//   get(key: string): Promise<any>;
+//   put(key: string, value: any): Promise<any>;
+//   del(key: string): Promise<any>;
+//   close(): any;
+// }
 
 export type Schema<T> = {
   key: keyof T;
