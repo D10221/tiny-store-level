@@ -1,6 +1,6 @@
 {
   "name": "@d10221/tiny-store-level",
-  "version": "1.0.0-alpha.2",
+  "version": "1.0.0-alpha.3",
   "description": "tiny-store level-db implementaion of Store<T>",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
