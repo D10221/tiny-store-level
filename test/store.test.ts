@@ -216,13 +216,16 @@ describe("Level Store", () => {
   });
 
   it("updates keeps othe values", async () => {
-    const store = await createStore<{ name: string; xyz: string }>(db, "things125");
+    const store = await createStore<{ name: string; xyz: string }>(
+      db,
+      "things125",
+    );
     {
       const id = randomString();
-      await store.add(id, { name: 'bob', xyz: 'z' });
-      expect(await store.findOne(id)).toMatchObject({ name: 'bob', xyz: 'z'});
-      await store.update(id, { xyz: 'y' }); // same name      
-      expect(await store.findOne(id)).toMatchObject({ name: 'bob', xyz: 'y'});
+      await store.add(id, { name: "bob", xyz: "z" });
+      expect(await store.findOne(id)).toMatchObject({ name: "bob", xyz: "z" });
+      await store.update(id, { xyz: "y" }); // same name
+      expect(await store.findOne(id)).toMatchObject({ name: "bob", xyz: "y" });
     }
   });
 
