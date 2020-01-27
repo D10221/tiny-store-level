@@ -49,7 +49,6 @@ describe("Level Store", () => {
   it("10000's", async () => {
     // 1089ms, 950ms with memdown
     // 1575ms with leveldown
-    // 40s with jsondown
     // jest.setTimeout(60000);
 
     const store = await createStore<Thing>(db, "things3");
