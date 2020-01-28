@@ -1,7 +1,9 @@
 import jsonquery = require("jsonquery");
 
 /** @description Tuple, [0]=id, [1]=value */
-export type StoreRecord<T> = T & { $id?: string | undefined; } & { [key in keyof T]: T[key] };
+export type StoreRecord<T> = T & { $id?: string | undefined } & {
+    [key in keyof T]: T[key];
+  };
 
 export interface Store<T> {
   idExists(id: T[keyof T] & string): Promise<boolean>;
@@ -15,22 +17,16 @@ export interface Store<T> {
   clear(): Promise<any>;
 }
 
-export type Serializer = {
-  serialize: (a: any) => string;
-  deserialize: (value: string | Buffer) => any;
-};
-
-export type KeyEncoder = {
-  base(): string,
-  encode(s: string): string;
-  decode(s: string): string;
-  isMatch: (s: string | Buffer) => boolean;
-};
-
-export type ValueType = "string" | "number" | "boolean" | "object" | "array" | "date";
+export type ValueType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "object"
+  | "array"
+  | "date";
 
 export type Schema<T> = {
-  primaryKey?: boolean
+  primaryKey?: boolean;
   key: keyof T;
   notNull?: boolean | undefined;
   unique?: boolean | undefined;

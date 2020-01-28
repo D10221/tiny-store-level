@@ -1,13 +1,13 @@
 import jsonquery from "jsonquery";
 import { LevelUp } from "levelup";
 import { Transform } from "stream";
-import isNotFoundError from "./isNotFoundError";
-import keyEncoder from "./key-encoder";
-import KeyError from "./KeyError";
-import { isValidPrimaryKey, PRIMARY_KEY_MAX_VALUE } from "./primaryKeys";
+import keyEncoder, { isValidKey, KEY_MAX_VALUE, KeyError } from "./keys";
 import schema from "./schema";
 import { Schema, Store, StoreRecord } from "./types";
 
+function isNotFoundError(error: Error): error is Error {
+  return error instanceof Error && error.name === "NotFoundError";
+}
 function toPromise<T>(stream: NodeJS.ReadableStream) {
   return new Promise<T[]>((resolve, reject) => {
     try {
@@ -31,13 +31,16 @@ function toPromise<T>(stream: NodeJS.ReadableStream) {
 /**
  *
  */
-const createStore = <T extends { [key: string]: any } = {}>(
+export default function createStore<T extends { [key: string]: any } = {}>(
   db: LevelUp,
   partitionName: string,
   schemas: Schema<T>[] = [],
-): Store<T> => {
+): Store<T> {
   const { encode, decode, base, isMatch } = keyEncoder(partitionName);
-  const { primaryKey, applyDefaultValues, validate } = schema(schemas, partitionName);
+  const { primaryKey, applyDefaultValues, validate } = schema(
+    schemas,
+    partitionName,
+  );
 
   const idExists = async (id: keyof T & string) => {
     try {
@@ -49,9 +52,7 @@ const createStore = <T extends { [key: string]: any } = {}>(
     }
   };
 
-  const findOne = async (
-    id: keyof T & string,
-  ): Promise<T> => {
+  const findOne = async (id: keyof T & string): Promise<T> => {
     try {
       const value = await db.get(encode(id));
       return value;
@@ -62,12 +63,15 @@ const createStore = <T extends { [key: string]: any } = {}>(
   /** */
   async function add(data: StoreRecord<T>) {
     try {
-      if (!data) return Promise.reject(new Error("StoreRecord required"))
+      if (!data) return Promise.reject(new Error("StoreRecord required"));
       const id = data[primaryKey.key];
-      if (!isValidPrimaryKey(id)) {
-        return Promise.reject(new KeyError(`Invalid id: ${JSON.stringify(id)}`));
+      if (!isValidKey(id)) {
+        return Promise.reject(
+          new KeyError(`Invalid id: ${JSON.stringify(id)}`),
+        );
       }
-      if (await store.idExists(id)) return Promise.reject(new KeyError(`Duplicated id: "${id}"`));
+      if (await store.idExists(id))
+        return Promise.reject(new KeyError(`Duplicated id: "${id}"`));
       const value = applyDefaultValues(data);
       await validate(value, store.findMany);
       const ret = await db.put(encode(id), value);
@@ -79,9 +83,9 @@ const createStore = <T extends { [key: string]: any } = {}>(
   /** */
   async function update(data: Partial<StoreRecord<T>>) {
     try {
-      if (!data) return Promise.reject(new Error("StoreRecord required"))
+      if (!data) return Promise.reject(new Error("StoreRecord required"));
       const id = data[primaryKey.key];
-      if (!isValidPrimaryKey(id)) return Promise.reject(new Error("Invalid key"));
+      if (!isValidKey(id)) return Promise.reject(new Error("Invalid key"));
       const prev = await store.findOne(id as any); // throw not found
       await validate({ [primaryKey.key]: id, ...data }, store.findMany);
       const ret = await db.put(encode(id), { ...prev, ...data });
@@ -91,33 +95,24 @@ const createStore = <T extends { [key: string]: any } = {}>(
     }
   }
 
-  const findMany = (
-    query?: jsonquery.Query<T & { $key: string }>,
-  ) => {
+  const findMany = (query?: jsonquery.Query<T & { $key: string }>) => {
     const transform = new Transform({
       objectMode: true,
-      transform: function ({ key, value }, _encoding_, callback) {
+      transform: function({ key, value }, _encoding_, callback) {
         this.push({ ...value, [primaryKey.key]: decode(key) });
         callback();
-      }
+      },
     });
-    const stream = query
-      ? db
-        .createReadStream({
-          gt: base(),
-          lt: encode(PRIMARY_KEY_MAX_VALUE),
-        })
-        .pipe(transform)
-        .pipe(jsonquery(query))
-      : // ...
-      db
-        .createReadStream({
-          gt: base(),
-          lt: encode(PRIMARY_KEY_MAX_VALUE),
-        })
-        .pipe(transform)
-    return toPromise<StoreRecord<T>>(stream);
-  }
+    const stream = db
+      .createReadStream({
+        gt: base(),
+        lt: encode(KEY_MAX_VALUE),
+      })
+      .pipe(transform);
+    return toPromise<StoreRecord<T>>(
+      query ? stream.pipe(jsonquery(query)) : stream,
+    );
+  };
   const clear = () =>
     new Promise<any>((resolve, reject) => {
       try {
@@ -140,7 +135,7 @@ const createStore = <T extends { [key: string]: any } = {}>(
         return reject(error);
       }
     });
-  // ... 
+  // ...
   const store = {
     idExists,
     add,
@@ -151,6 +146,4 @@ const createStore = <T extends { [key: string]: any } = {}>(
     clear,
   };
   return store;
-};
-export type CreateStore = typeof createStore;
-export default createStore;
+}

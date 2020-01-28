@@ -1,11 +1,7 @@
-import {
-  isValidPrimaryKey,
-  isValidPartitionName,
-  PRIMARY_KEY_MAX_VALUE,
-} from "../src/primaryKeys";
+import { isValidKey, isValidPartitionName, KEY_MAX_VALUE } from "../src/keys";
 
 function expectValidPrimaryKey(expected: boolean, value: string) {
-  if (isValidPrimaryKey(value) !== expected) {
+  if (isValidKey(value) !== expected) {
     throw new Error(`Expected ${value} to be valid=${expected}`);
   }
 }
@@ -35,13 +31,13 @@ describe("Primary Keys", () => {
         }
       }
     }
-    expect(isValidPrimaryKey("")).toBe(false);
-    expect(isValidPrimaryKey(" ")).toBe(false);
-    expect(isValidPrimaryKey(null)).toBe(false);
-    expect(isValidPrimaryKey(undefined)).toBe(false);
-    expect(isValidPrimaryKey(1)).toBe(false);
-    expect(isValidPrimaryKey({})).toBe(false);
-    expect(isValidPrimaryKey(function() {})).toBe(false);
+    expect(isValidKey("")).toBe(false);
+    expect(isValidKey(" ")).toBe(false);
+    expect(isValidKey(null)).toBe(false);
+    expect(isValidKey(undefined)).toBe(false);
+    expect(isValidKey(1)).toBe(false);
+    expect(isValidKey({})).toBe(false);
+    expect(isValidKey(function() {})).toBe(false);
   });
 
   it("is Valid PartitionName", () => {
@@ -69,23 +65,23 @@ describe("Primary Keys", () => {
   });
   it("maxPrimaryKeyValue", () => {
     expect(
-      PRIMARY_KEY_MAX_VALUE >
+      KEY_MAX_VALUE >
         "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ_",
     ).toBe(true);
     expect(
-      PRIMARY_KEY_MAX_VALUE >
+      KEY_MAX_VALUE >
         "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ9",
     ).toBe(true);
     expect(
-      PRIMARY_KEY_MAX_VALUE >
+      KEY_MAX_VALUE >
         "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ0",
     ).toBe(true);
     expect(
-      PRIMARY_KEY_MAX_VALUE >
+      KEY_MAX_VALUE >
         "_ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
     ).toBe(true);
     expect(
-      PRIMARY_KEY_MAX_VALUE >
+      KEY_MAX_VALUE >
         "9ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
     ).toBe(true);
   });

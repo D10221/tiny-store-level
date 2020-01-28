@@ -1,7 +1,7 @@
 import createStore, { MemDb } from "../src";
-import { toDate } from "../src/dates";
-import KeyError from "../src/KeyError";
-import SchemaError from "../src/schema-error";
+import { toDate } from "./dates";
+import { KeyError } from "../src/keys";
+import { SchemaError } from "../src/schema";
 import randomString from "./random-string";
 
 interface Thing extends Object {
@@ -68,7 +68,9 @@ describe("Level Store", () => {
 
   it("rejects bad id", async () => {
     const store = createStore<{}>(db, "things3");
-    expect(await store.add({ $id: "_%$#@" }).catch(x => x)).toBeInstanceOf(KeyError);
+    expect(await store.add({ $id: "_%$#@" }).catch(x => x)).toBeInstanceOf(
+      KeyError,
+    );
   });
 
   it("Schema rejects not in schema", async () => {
@@ -80,84 +82,91 @@ describe("Level Store", () => {
   });
   it("Schema rejects bad types (UPDATE)", async () => {
     const store = createStore<{
-      ok: any
+      ok: any;
     }>(db, "things-" + randomString(), [
       {
         key: "ok",
         notNull: true,
         unique: true,
-        type: "boolean"
+        type: "boolean",
       },
     ]);
-  })
+  });
   it("Schema rejects bad types (ADD)", async () => {
     expect(
       await createStore<{
-        name: any
+        name: any;
       }>(db, "things-" + randomString(), [
         {
           key: "name",
           notNull: true,
           unique: true,
-          type: ["string", "number"]
+          type: ["string", "number"],
         },
-      ]).add({ $id: randomString(), name: true })
-        .catch(e => e)
+      ])
+        .add({ $id: randomString(), name: true })
+        .catch(e => e),
     ).toBeInstanceOf(SchemaError);
 
     expect(
       await createStore<{
-        name: any
+        name: any;
       }>(db, "things-" + randomString(), [
         {
           key: "name",
           notNull: true,
           unique: true,
-          type: ["string", "number"]
+          type: ["string", "number"],
         },
-      ]).add({ $id: randomString(), name: {} })
-        .catch(e => e)
+      ])
+        .add({ $id: randomString(), name: {} })
+        .catch(e => e),
     ).toBeInstanceOf(SchemaError);
 
     expect(
       await createStore<{
-        name: any
+        name: any;
       }>(db, "things-" + randomString(), [
         {
           key: "name",
           notNull: true,
           unique: true,
-          type: ["string", "number"]
+          type: ["string", "number"],
         },
-      ]).add({ $id: randomString(), name: null })
-        .catch(e => e)
+      ])
+        .add({ $id: randomString(), name: null })
+        .catch(e => e),
     ).toBeInstanceOf(SchemaError);
 
     expect(
       await createStore<{
-        name: any
+        name: any;
       }>(db, "things-" + randomString(), [
         {
           key: "name",
           notNull: true,
           unique: true,
-          type: ["string", "number"]
+          type: ["string", "number"],
         },
-      ]).add({ $id: randomString(), name: undefined })
-        .catch(e => e)
+      ])
+        .add({ $id: randomString(), name: undefined })
+        .catch(e => e),
     ).toBeInstanceOf(SchemaError);
 
-    expect(await createStore<{
-      name: any
-    }>(db, "things-" + randomString(), [
-      {
-        key: "name",
-        notNull: true,
-        unique: true,
-        type: ["string", "number"]
-      },
-    ]).add({ $id: randomString(), name: function () { } })
-      .catch(e => e)).toBeInstanceOf(SchemaError)
+    expect(
+      await createStore<{
+        name: any;
+      }>(db, "things-" + randomString(), [
+        {
+          key: "name",
+          notNull: true,
+          unique: true,
+          type: ["string", "number"],
+        },
+      ])
+        .add({ $id: randomString(), name: function() {} })
+        .catch(e => e),
+    ).toBeInstanceOf(SchemaError);
   });
 
   it("defaults values", async () => {
@@ -222,10 +231,7 @@ describe("Level Store", () => {
   });
 
   it("updates keeps othe values", async () => {
-    const store = createStore<{ name: string; xyz: string }>(
-      db,
-      "things125",
-    );
+    const store = createStore<{ name: string; xyz: string }>(db, "things125");
     {
       const id = randomString();
       await store.add({ $id: id, name: "bob", xyz: "z" });
