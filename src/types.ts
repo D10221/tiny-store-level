@@ -1,17 +1,17 @@
 import jsonquery = require("jsonquery");
 
 /** @description Tuple, [0]=id, [1]=value */
-export type StoreRecord<T> = [string, T];
+export type StoreRecord<T> = T & { $id?: string | undefined; } & { [key in keyof T]: T[key] };
 
 export interface Store<T> {
-  idExists(id: string): Promise<boolean>;
-  add(id: string, data: T): Promise<any>;
-  update(id: string, data: Partial<T>): Promise<any>;
-  findOne(id: string): Promise<T>;
+  idExists(id: T[keyof T] & string): Promise<boolean>;
+  add(record: StoreRecord<T>): Promise<any>;
+  update(data: Partial<StoreRecord<T>>): Promise<any>;
+  findOne(id: T[keyof T] & string): Promise<T>;
   findMany(
-    query?: jsonquery.Query<{ key: string; value: T }>,
+    query?: jsonquery.Query<T & { $key: string }>,
   ): Promise<StoreRecord<T>[]>;
-  remove(id: string): Promise<any>;
+  remove(id: T[keyof T] & string): Promise<any>;
   clear(): Promise<any>;
 }
 
@@ -27,31 +27,17 @@ export type KeyEncoder = {
   isMatch: (s: string | Buffer) => boolean;
 };
 
-// export interface LevelLike {
-//   createReadStream(o?: {
-//     gt?: any;
-//     lt?: any;
-//     /** @default true */
-//     keys?: boolean;
-//     /** @default true */
-//     values?: boolean;
-//     /** @default -1 */
-//     limit?: number;
-//     reverse?: boolean;
-//   }): NodeJS.ReadableStream;
-//   get(key: string): Promise<any>;
-//   put(key: string, value: any): Promise<any>;
-//   del(key: string): Promise<any>;
-//   close(): any;
-// }
+export type ValueType = "string" | "number" | "boolean" | "object" | "array" | "date";
 
 export type Schema<T> = {
+  primaryKey?: boolean
   key: keyof T;
   notNull?: boolean | undefined;
   unique?: boolean | undefined;
   default?: any | undefined;
   /**
    * whatever returns typeof
+   * replace with valid(x)=> boolean?
    */
-  type?: string | string[];
+  type?: ValueType | ValueType[];
 };

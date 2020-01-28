@@ -4,7 +4,7 @@ import { isValidPartitionName } from "./primaryKeys";
 /**
  * Key encoder
  */
-export const keyEncoder = (name: string): KeyEncoder => {
+export default function keyEncoder(name: string): KeyEncoder {
   if (!isValidPartitionName)
     throw new Error(`Patition name "${name}" is Not valid`);
   const regex = new RegExp(`^${name}\/.*`, "i");

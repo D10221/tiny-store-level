@@ -4,9 +4,9 @@
  */
 export const PRIMARY_KEY_MAX_VALUE = String.fromCharCode(0xDBFF).repeat(64);
 /** forcing alphanumeric will enable easier gt & lt and reserved keys like $index? */
-export function isValidPrimaryKey(x: any) {
+export function isValidPrimaryKey(x: any) : x is string {
   return typeof x === "string" && /^[a-zA-Z0-9]+$/.test(x);
 }
-export function isValidPartitionName(x: any) {
+export function isValidPartitionName(x: any): x is string {
   return typeof x === "string" && /^[a-zA-Z0-9_-]+$/.test(x) && x < PRIMARY_KEY_MAX_VALUE;
 }

@@ -9,5 +9,4 @@ export const MemDb = () =>
   levelup(encoding(new MemDown(), { valueEncoding: "json" }));
 
 export { default, CreateStore } from "./create-store";
-export { default as mapOut } from "./map-out";
 export * from "./types";
