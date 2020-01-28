@@ -1,6 +1,5 @@
 import jsonquery = require("jsonquery");
 
-/** @description Tuple, [0]=id, [1]=value */
 export type StoreRecord<T> = T & { $id?: string | undefined } & {
     [key in keyof T]: T[key];
   };

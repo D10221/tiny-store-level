@@ -55,10 +55,26 @@ export default function Schemas<T>(
   // Assign default $id
   schemas =
     schemas && schemas.length
-      ? schemas.find(x => Boolean(x.primaryKey))
+      ? schemas.find(
+          x =>
+            Boolean(x.primaryKey) ||
+            // override $id and no alt primary key provided results in NO primary key
+            x.key === DEFAULT_SCHEMA.key,
+        )
         ? schemas
         : schemas.concat(DEFAULT_SCHEMA)
-      : [DEFAULT_SCHEMA];
+      : [DEFAULT_SCHEMA]; // Assign default $id
+  // find dupl keys
+  const dups = schemas.filter(
+    (s, i, all) =>
+      all
+        .slice(i + 1)
+        .map(x => x.key)
+        .indexOf(s.key) !== -1,
+  );
+  if (dups && dups.length) {
+    throw new SchemaError("Dup keys " + dups.map(x => x.key).join(", "));
+  }
 
   const primaryKeys = schemas.filter(x => Boolean(x.primaryKey));
   if (primaryKeys.length < 1) {
@@ -70,6 +86,17 @@ export default function Schemas<T>(
     );
   }
   const primaryKey = primaryKeys[0];
+  // unique: true, notNull: false, default: () => undefined, type: "number"
+  if (primaryKey.notNull === false) {
+    throw new SchemaError("Not Supported");
+  }
+  if (primaryKey.type && primaryKey.type !== "string") {
+    throw new SchemaError("Not Supported");
+  }
+  if (primaryKey.default) {
+    throw new SchemaError("Not Supported");
+  }
+
   const schemaKeys = schemas.map(x => x.key) as (keyof T)[]; //.filter(x => x !== primaryKey.key) as (keyof T)[];
   /**
    *  Dont validate $id
