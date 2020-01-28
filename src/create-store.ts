@@ -4,7 +4,7 @@ import { Schema, Store, StoreRecord, KeyEncoder } from "./types";
 import KeyError from "./KeyError";
 import isNotFoundError from "./isNotFoundError";
 import { LevelUp } from "levelup";
-
+import jsonquery from "jsonquery";
 const idExists = (db: LevelUp) => async (id: string) => {
   try {
     await db.get(id);
@@ -13,11 +13,6 @@ const idExists = (db: LevelUp) => async (id: string) => {
     if (isNotFoundError(error)) return false;
     throw error;
   }
-};
-
-/** forcing alphanumeric will enable easier gt & lt and reserved keys like $index? */
-const isValidPrimaryKey = (x: any) => {
-  return typeof x === "string" && /^[a-zA-Z0-9]*$/.test(x);
 };
 
 const findOne = (db: LevelUp) => <T>(encoder: KeyEncoder) => async (
@@ -30,16 +25,45 @@ const findOne = (db: LevelUp) => <T>(encoder: KeyEncoder) => async (
     return Promise.reject(error);
   }
 };
+import { Transform } from "stream";
+import { isValidPrimaryKey, PRIMARY_KEY_MAX_VALUE } from "./primaryKeys";
 
-const findMany = (db: LevelUp) => <T>(enc: KeyEncoder) => () =>
+const transorm = () => {
+  const stream = new Transform({
+    objectMode: true,
+  });
+  stream._transform = function({ key, value }, encoding, callback) {
+    this.push({ ...value, $key: key });
+    callback();
+  };
+  return stream;
+};
+
+const findMany = (db: LevelUp) => <T>(enc: KeyEncoder) => (
+  query?: jsonquery.Query<T & { $key: string }>,
+) =>
   new Promise<StoreRecord<T>[]>((resolve, reject) => {
     try {
-      const stream = db.createReadStream();
+      const stream = query
+        ? db
+            .createReadStream({
+              gt: enc.base(),
+              lt: enc.encode(PRIMARY_KEY_MAX_VALUE),
+            })
+            .pipe(transorm())
+            .pipe(jsonquery(query))
+        : // ...
+          db
+            .createReadStream({
+              gt: enc.base(),
+              lt: enc.encode(PRIMARY_KEY_MAX_VALUE),
+            })
+            .pipe(transorm());
+
       let result: StoreRecord<T>[] = [];
       stream.on("data", ({ key, value }) => {
-        if (enc.isMatch(key)) {
-          result.push([enc.decode(key), value]);
-        }
+        ///if (enc.isMatch(key)) { }
+        result.push([enc.decode(key), value]);
       });
       stream.on("error", error => {
         reject(error);
@@ -78,11 +102,11 @@ const clear = (db: LevelUp) => (enc: KeyEncoder) => () =>
 /**
  *
  */
-const createStore = async <T extends { [key: string]: any } = {}>(
+const createStore = <T extends { [key: string]: any } = {}>(
   db: LevelUp,
   partitionName: string,
   schemas: Schema<T>[] = [],
-): Promise<Store<T>> => {
+): Store<T> => {
   const { encode } = keyEncoder(partitionName);
 
   const _schema = schema(schemas, partitionName);
