@@ -1,33 +1,33 @@
 import { isValidID, isValidPartitionName, KEY_MAX_VALUE } from "../src/keys";
 
-function expectValidPrimaryKey(expected: boolean, value: string) {
+function expectValidID(expected: boolean, value: string) {
   if (isValidID(value) !== expected) {
     throw new Error(`Expected ${value} to be valid=${expected}`);
   }
 }
 
-const chars = `\`'",.;:<>?/{}[]()_-=+*&^%$#@!~`;
+const chars = `\`'",.;:<>?/{}[]()_-=+*&^%$#@!~\\/`;
 const numbers = "0123456789";
 const alpha = "abcdefghijklmniopqrstuvwxyz";
 
-describe("Primary Keys", () => {
-  it("is Valid PrimaryKey", () => {
+describe("isValidID", () => {
+  it("Valid id", () => {
     for (const c of chars) {
-      expectValidPrimaryKey(false, c);
+      expectValidID(false, c);
       for (const n of numbers) {
         for (const a of alpha) {
-          expectValidPrimaryKey(false, c + n + a);
-          expectValidPrimaryKey(false, a + n + c);
-          expectValidPrimaryKey(false, c + n + c);
+          expectValidID(false, c + n + a);
+          expectValidID(false, a + n + c);
+          expectValidID(false, c + n + c);
 
-          expectValidPrimaryKey(false, c + a);
-          expectValidPrimaryKey(false, c + n);
-          expectValidPrimaryKey(false, a + c);
-          expectValidPrimaryKey(false, n + c);
+          expectValidID(false, c + a);
+          expectValidID(false, c + n);
+          expectValidID(false, a + c);
+          expectValidID(false, n + c);
 
-          expectValidPrimaryKey(true, a + n + a);
-          expectValidPrimaryKey(true, n + a);
-          expectValidPrimaryKey(true, a + n);
+          expectValidID(true, a + n + a);
+          expectValidID(true, n + a);
+          expectValidID(true, a + n);
         }
       }
     }

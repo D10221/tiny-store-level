@@ -12,32 +12,6 @@ describe("Level Store", () => {
     expect(x).toMatchObject([]);
   });
 
-  it("10000's", async () => {
-    // 1089ms, 950ms with memdown
-    // 1575ms with leveldown
-    // jest.setTimeout(60000);
-
-    const store = createStore<{ name: string }>(db, "things3");
-    console.time("add:1");
-    await store.add({ _id_: "1", name: "1" });
-    console.timeEnd("add:1");
-    console.time("add:x10000");
-    for (let i = 0; i < 10000; i++) {
-      await store.add({ _id_: `indexed${i}`, name: `x${i}` });
-    }
-    console.timeEnd("add:x10000");
-
-    const one = 9999;
-    console.time(`findOne:${one}`);
-    expect((await store.findOne(`indexed${one}`)).name).toBe(`x${one}`);
-    console.timeEnd(`findOne:${one}`);
-
-    const many = 10001;
-    console.time(`findMany:${many}`);
-    expect((await store.findMany()).length).toBe(many);
-    console.timeEnd(`findMany:${many}`);
-  });
-
   it("is not found error", async () => {
     const store = createStore<{ name: string }>(db, "things13", [
       { key: "name", notNull: true, unique: true, type: "string" },

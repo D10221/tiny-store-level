@@ -1,8 +1,8 @@
 import { Query } from "jsonquery";
 
-export type StoreRecord<T> = T & { "_id_"?: string | undefined } & {
-  [key in keyof T]: T[key];
-};
+export type StoreRecord<T> = T & { _id_?: string | undefined } & {
+    [key in keyof T]: T[key];
+  };
 
 export type ValueType =
   | "string"
@@ -25,12 +25,20 @@ export type Schema<T> = {
   type?: ValueType | ValueType[];
 };
 export type ID<T> = T[keyof T] & string;
-export type Exists<T> = (idOrQuery: ID<T> | Query<StoreRecord<T>>) => Promise<boolean>;
+export type Exists<T> = (
+  idOrQuery: ID<T> | Query<StoreRecord<T>>,
+) => Promise<boolean>;
 export type Add<T> = (record: StoreRecord<T>, force?: boolean) => Promise<void>;
 export type Update<T> = (data: Partial<StoreRecord<T>>) => Promise<void>;
-export type FindOne<T> = (isOrquery?: ID<T> | Query<StoreRecord<T>>) => Promise<StoreRecord<T>>
-export type FindMany<T> = (query?: Query<StoreRecord<T>>) => Promise<StoreRecord<T>[]>
-export type Delete<T> = (idOrQuery: "*" | ID<T> | Query<StoreRecord<T>>) => Promise<number>;
+export type FindOne<T> = (
+  isOrquery?: ID<T> | Query<StoreRecord<T>>,
+) => Promise<StoreRecord<T>>;
+export type FindMany<T> = (
+  query?: Query<StoreRecord<T>>,
+) => Promise<StoreRecord<T>[]>;
+export type Delete<T> = (
+  idOrQuery: "*" | ID<T> | Query<StoreRecord<T>>,
+) => Promise<number>;
 
 export interface Store<T> {
   exists: Exists<T>;

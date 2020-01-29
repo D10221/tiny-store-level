@@ -1,11 +1,9 @@
 import { LevelUp } from "levelup";
-import { Schema } from "./types";
-import { Transform } from "stream";
+import memoize from "./memoize";
 /**
  * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charCodeAt
  * 0xDBFF = higher bound
  */
-
 export const KEY_MAX_VALUE = String.fromCharCode(0xdbff).repeat(64);
 /** forcing alphanumeric will enable easier gt & lt and reserved keys like $index? */
 export function isValidID(x: any): x is string {
@@ -33,51 +31,29 @@ export class KeyError extends Error {
     return new KeyError(`ID ${id} not Found`);
   }
 }
+function getParts(x: string) {
+  return x.split("/");
+}
 /**
  * Key encoder
  */
 export default function keyEncoder(partitionName: string) {
-
   if (!isValidPartitionName)
     throw new Error(`Patition name "${partitionName}" is Not valid`);
-
   const regex = new RegExp(`^${partitionName}\/.*`, "i");
-
-  function getParts(x: string) {
-    return x.toString().split("/");
-  }
-  
+  const test = memoize((s: string) => regex.test(s));
+  const parts = memoize(getParts);
   const enc = {
-    keyRoot: () => partitionName + "/",
-    isMatch(key: Buffer | string) {
-      if (typeof key === "string") return regex.test(key);
-      return regex.test(key.toString());
-    },
-    decodeKey(key: string | Buffer): string {
-      if (!key) {
-        throw new Error("@param key {string|buffer} required");
-      }
-      if (typeof key !== "string") {
-        return enc.decodeKey(key.toString());
-      }
-      const [root, id] = getParts(key);
-      if (root !== partitionName) throw KeyError.invalidOrMissingKey(root);
-      if (!isValidID(id)) throw KeyError.invalidOrMissigID(root, id);
-      return id;
-    },
-    encodeKey(id: string) {
-      if (getParts(id)[0] === partitionName) {
-        throw new Error("Wtf");
-      }
-      return `${partitionName}/${id}`;
-    },
+    keyRoot: partitionName + "/",
+    isMatch: memoize(test),
+    decodeKey: memoize((key: string) => parts(key)[1]),
+    encodeKey: memoize((id: string) => `${partitionName}/${id}`),
     scopedStream(db: LevelUp) {
-      return db
-        .createReadStream({
-          gt: enc.keyRoot(),
-          lt: enc.encodeKey(KEY_MAX_VALUE),
-        });
-    }
+      return db.createReadStream({
+        gt: enc.keyRoot,
+        lt: enc.encodeKey(KEY_MAX_VALUE),
+      });
+    },
   };
   return enc;
 }

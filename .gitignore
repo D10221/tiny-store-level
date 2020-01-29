@@ -18,3 +18,5 @@
 *store.json
 test-db/
 testdb/
+coverage/
+*.0x/
