@@ -1,5 +1,11 @@
 const { default: createStore } = require("../dist");
-const {MemDb} = require("./util/level");
+const encoding = require("encoding-down");
+const levelup = require("levelup");
+const MemDown = require("memdown");
+
+const MemDb = () =>
+  levelup(encoding(new MemDown(), { valueEncoding: "json" }));
+
 
 function randomString() {
   return require("crypto")
