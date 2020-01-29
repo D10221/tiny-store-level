@@ -1,24 +1,8 @@
-import jsonquery = require("jsonquery");
+import { Query } from "jsonquery";
 
 export type StoreRecord<T> = T & { $id?: string | undefined } & {
-    [key in keyof T]: T[key];
-  };
-
-export interface Store<T> {
-  // exists query?
-  idExists(id: T[keyof T] & string): Promise<boolean>;
-  // Set? upsert ?
-  add(record: StoreRecord<T>): Promise<void>;
-  update(data: Partial<StoreRecord<T>>): Promise<void>;
-  // alow query ?
-  findOne(id: T[keyof T] & string): Promise<StoreRecord<T>>;
-  findMany(
-    query?: jsonquery.Query<T & { $key: string }>,
-  ): Promise<StoreRecord<T>[]>;
-  // merge: remove clear as One ?
-  remove(id: T[keyof T] & string): Promise<any>;
-  clear(): Promise<any>;
-}
+  [key in keyof T]: T[key];
+};
 
 export type ValueType =
   | "string"
@@ -40,3 +24,20 @@ export type Schema<T> = {
    */
   type?: ValueType | ValueType[];
 };
+export type ID<T> = T[keyof T] & string;
+export type Exists<T> = (idOrQuery: ID<T> | Query<StoreRecord<T>>) => Promise<boolean>;
+export type Add<T> = (record: StoreRecord<T>) => Promise<void>;
+export type Update<T> = (data: Partial<StoreRecord<T>>) => Promise<void>;
+export type Get<T> = (id: ID<T>) => Promise<StoreRecord<T>>;
+export type FindOne<T> = (query?: Query<StoreRecord<T>>) => Promise<StoreRecord<T>>
+export type FindMany<T> = (query?: Query<StoreRecord<T>>) => Promise<StoreRecord<T>[]>
+export type Delete<T> = (idOrQuery: "*" | ID<T> | Query<StoreRecord<T>>) => Promise<any>;
+
+export interface Store<T> {
+  exists: Exists<T>;
+  add: Add<T>;
+  update: Update<T>;
+  findOne: FindOne<T>;
+  findMany: FindMany<T>;
+  delete: Delete<T>;
+}
