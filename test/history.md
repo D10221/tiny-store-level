@@ -30,3 +30,13 @@ i7 Linux
         findOne:9999: 1ms
     console.time test/store.test.ts:38
         findMany:10001: 495ms
+
+
+    console.time test/store.test.ts:23
+      add:1: 2ms
+    console.time test/store.test.ts:28
+      add:x10000: 1213ms
+    console.time test/store.test.ts:33
+      findOne:9999: 1ms
+    console.time test/store.test.ts:38
+      findMany:10001: 493ms
