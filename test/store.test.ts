@@ -12,18 +12,6 @@ describe("Level Store", () => {
     expect(x).toMatchObject([]);
   });
 
-  it("Add , Remove, Find removed", async () => {
-    const things = createStore<{ name: string }>(db, "things");
-    await things.clear();
-    expect(await things.add({ $id: "a", name: "aaa" })).toBe(undefined);
-    // ...
-    expect(await things.clear()).toBe(1);
-    expect(await things.add({ $id: "a", name: "aaa" })).toBe(undefined);
-    expect(await things.findOne("a")).toMatchObject({ name: "aaa", $id: "a" });
-    expect(await things.remove("a")).toBe(undefined);
-    expect(await things.findOne("a").catch(e => e.name)).toBe("NotFoundError");
-  });
-
   it("10000's", async () => {
     // 1089ms, 950ms with memdown
     // 1575ms with leveldown
@@ -57,7 +45,7 @@ describe("Level Store", () => {
     const id = randomString();
     const aName = randomString();
     await store.add({ $id: id, name: aName });
-    await store.remove(id);
+    await store.delete(id);
     const found = await store.findOne(id).catch(e => e);
     expect(found).toBeInstanceOf(Error);
     expect((found as Error).name === "NotFoundError").toBe(true);
@@ -111,20 +99,19 @@ describe("Level Store", () => {
       })
       .catch(x => x);
     expect(ret).toBeInstanceOf(KeyError);
-    expect(ret.message).toBe(KeyError.invalidOrMissig("$id").message);
+    expect(ret.message).toBe(KeyError.invalidOrMissigID("$id").message);
   });
-
   it("Works alt $id", async () => {
-    const store = createStore<{ xname: string; id: string }>(db, "things", [
+    const store = createStore<{ xname: string; id: string }>(db, randomString(), [
       { key: "id", primaryKey: true },
     ]);
-    await store.clear();
+    expect(await store.delete("*")).toBe(0);
     expect(await store.add({ id: "a", xname: "aaa" })).toBe(undefined);
-    // ...
-    expect(await store.clear()).toBe(1);
+    expect(await store.findMany()).toMatchObject([{ id: "a", xname: "aaa" }])
+    expect(await store.delete("*")).toBe(1);
     expect(await store.add({ id: "a", xname: "aaa" })).toBe(undefined);
     expect(await store.findOne("a")).toMatchObject({ xname: "aaa", id: "a" });
-    expect(await store.remove("a")).toBe(undefined);
+    expect(await store.delete("a")).toBe(1);
     expect(await store.findOne("a").catch(e => e.name)).toBe("NotFoundError");
   });
 });

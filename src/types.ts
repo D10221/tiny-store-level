@@ -26,12 +26,11 @@ export type Schema<T> = {
 };
 export type ID<T> = T[keyof T] & string;
 export type Exists<T> = (idOrQuery: ID<T> | Query<StoreRecord<T>>) => Promise<boolean>;
-export type Add<T> = (record: StoreRecord<T>) => Promise<void>;
+export type Add<T> = (record: StoreRecord<T>, force?: boolean) => Promise<void>;
 export type Update<T> = (data: Partial<StoreRecord<T>>) => Promise<void>;
-export type Get<T> = (id: ID<T>) => Promise<StoreRecord<T>>;
-export type FindOne<T> = (query?: Query<StoreRecord<T>>) => Promise<StoreRecord<T>>
+export type FindOne<T> = (isOrquery?: ID<T> | Query<StoreRecord<T>>) => Promise<StoreRecord<T>>
 export type FindMany<T> = (query?: Query<StoreRecord<T>>) => Promise<StoreRecord<T>[]>
-export type Delete<T> = (idOrQuery: "*" | ID<T> | Query<StoreRecord<T>>) => Promise<any>;
+export type Delete<T> = (idOrQuery: "*" | ID<T> | Query<StoreRecord<T>>) => Promise<number>;
 
 export interface Store<T> {
   exists: Exists<T>;

@@ -1,15 +1,22 @@
-import { randomBytes } from "crypto";
 import createStore, { MemDb } from "../src";
+import randomString from "./util/random-string";
 
 let db = MemDb();
-const randomString = () => randomBytes(16).toString("hex");
 
 describe("Queries", () => {
   it("finds value", async () => {
-    const store = createStore<{ xname: string }>(db, "things14");
-    await store.add({ $id: randomString(), xname: "bob14" });
-    const ret = await store.findMany({ xname: { $in: ["bob14"] } });
-    expect(ret[0].xname).toBe("bob14");
-    expect(await store.findMany({ xname: { $in: ["bob"] } })).toMatchObject([]);
+    const store = createStore<{ name: string }>(db, randomString());
+    const id = randomString();
+    const name = randomString();
+    await store.add({ $id: id, name });
+    const ret = await store.findMany({ name: { $in: [name] } });
+    const x = ret[0];
+    expect(x).toBeTruthy();
+    expect(x.name).toBe(name);
+    const none = await store.findMany({ name: { $in: ["bob"] } })
+    expect(none).toMatchObject([]);
+    const found = await store.findMany({ $id: { $in: [id] } })
+    expect(found.length).toBe(1);
+    expect(found[0].$id).toBe(id);
   });
 });
