@@ -3,8 +3,18 @@ import { LevelUp } from "levelup";
 import { Transform } from "stream";
 import keyEncoder, { isValidID, KeyError } from "./keys";
 import schema from "./schema";
-import { Schema, StoreRecord, Delete, FindMany, Update, Add, FindOne, Exists, ID, } from "./types";
-import { toPromise, reduce, Reduce } from "./streams";
+import {
+  Schema,
+  StoreRecord,
+  Delete,
+  FindMany,
+  Update,
+  Add,
+  FindOne,
+  Exists,
+  ID,
+} from "./types";
+import { toPromise, concat, count, PromiseReducer } from "./streams";
 
 class NotImplementedError extends Error {
   constructor(what: string) {
@@ -27,7 +37,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
     schemas,
     partitionName,
   );
-  const exists: Exists<T> = async (queryOrId) => {
+  const exists: Exists<T> = async queryOrId => {
     if (typeof queryOrId === "string") {
       try {
         await db.get(encodeKey(queryOrId));
@@ -38,21 +48,22 @@ export default function createStore<T extends { [key: string]: any } = {}>(
       }
     }
     throw new NotImplementedError("exists(query)");
-  }
+  };
   const findOne: FindOne<T> = async (queryOrId): Promise<T> => {
     if (typeof queryOrId === "string") {
       try {
-        const value = await db.get(encodeKey(queryOrId));
+        const e = encodeKey(queryOrId);
+        const value = await db.get(e); //throws ?
         return { ...value, [primaryKey.key]: queryOrId };
       } catch (error) {
         return Promise.reject(error);
       }
     }
     throw new NotImplementedError("FindOne(query)");
-  }
+  };
   /**
-   * 
-   * @param data 
+   *
+   * @param data
    * @param {boolean} force force update 'ignore if exist'
    */
   const add: Add<T> = async (data: StoreRecord<T>, force: boolean = false) => {
@@ -62,7 +73,8 @@ export default function createStore<T extends { [key: string]: any } = {}>(
 
       if (!isValidID(id)) throw KeyError.invalidOrMissigID(primaryKey.key, id);
 
-      if (!force && await exists(id)) throw KeyError.idExists(primaryKey.key, id);
+      if (!force && (await exists(id)))
+        throw KeyError.idExists(primaryKey.key, id);
 
       const value = applyDefaultValues(data);
       await validate(value, findMany);
@@ -72,7 +84,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
     } catch (error) {
       return Promise.reject(error);
     }
-  }
+  };
 
   const update: Update<T> = async (data: Partial<StoreRecord<T>>) => {
     try {
@@ -90,39 +102,43 @@ export default function createStore<T extends { [key: string]: any } = {}>(
     } catch (error) {
       return Promise.reject(error);
     }
-  }
+  };
   type TransformFunction<X extends any = any> = (
     this: Transform,
     chunk: X,
     encoding: string,
-    callback: (error?: Error | null, data?: any) => void
+    callback: (error?: Error | null, data?: any) => void,
   ) => void;
-  const makeTransform = (transform: TransformFunction) => new Transform({
-    objectMode: true,
-    transform,
-  });
-  const decodeKeyValue: TransformFunction<{ key: string, value: any }> = function (data, _encoding, callback) {
+  const makeTransform = (transform: TransformFunction) =>
+    new Transform({
+      objectMode: true,
+      transform,
+    });
+  const decodeKeyValue: TransformFunction<{
+    key: string;
+    value: any;
+  }> = function(data, _encoding, callback) {
     try {
       const { key, value } = data;
-      this.push(({ ...value, [primaryKey.key]: decodeKey(key) }));
+      this.push({ ...value, [primaryKey.key]: decodeKey(key) });
       callback();
     } catch (error) {
       callback(error);
     }
-  }
+  };
   const findMany: FindMany<T> = (query?: Query<StoreRecord<T>>) => {
     const transform = makeTransform(decodeKeyValue);
     const stream = scopedStream(db).pipe(transform);
-    const acc: Reduce<StoreRecord<T>> = reduce;
-    const _toPromise = toPromise(acc, []);
+    const reduce = concat<StoreRecord<T>>(Boolean);
+    const _toPromise = toPromise(reduce, []);
     if (query) {
-      return _toPromise(stream.pipe(jsonquery(query)))
+      return _toPromise(stream.pipe(jsonquery(query)));
     } else {
       return _toPromise(stream);
     }
-  }
+  };
 
-  const $delete: Delete<T> = async (idOrquery) => {
+  const $delete: Delete<T> = async idOrquery => {
     if (typeof idOrquery === "string" && idOrquery === "*") {
       // delete all keys
       const stream = scopedStream(db);
@@ -140,8 +156,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
           stream.on("end", () => {
             resolve(result);
           });
-        }
-        catch (error) {
+        } catch (error) {
           reject(error);
         }
       });
@@ -149,7 +164,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
     if (typeof idOrquery === "string") {
       // its an _id_
       if (!(await exists(idOrquery))) {
-        return Promise.reject(KeyError.idNotFound(idOrquery))
+        return Promise.reject(KeyError.idNotFound(idOrquery));
       }
       const key = encodeKey(idOrquery);
       await db.get(key); //throws
@@ -157,19 +172,21 @@ export default function createStore<T extends { [key: string]: any } = {}>(
       return Promise.resolve(1);
     }
     if (typeof idOrquery === "object") {
-      // delete some criteria based             
-      const deletes = async (result: number, keyValue: { key: string, value: any }) => {
-        const { key, value } = keyValue;
-        const encodedKey = encodeKey(value[key]);
-        await db.del(encodedKey);
-        return result + 1;
-      };
-      return toPromise(deletes, 0)(scopedStream(db)
-        .pipe(makeTransform(decodeKeyValue))
-        .pipe(jsonquery(idOrquery)));
+      // delete some criteria based
+      return toPromise(
+        count<StoreRecord<T>>(async data => {
+          const encodedKey = encodeKey(data[primaryKey.key]);
+          await db.del(encodedKey);
+        }),
+        0,
+      )(
+        scopedStream(db)
+          .pipe(makeTransform(decodeKeyValue))
+          .pipe(jsonquery(idOrquery)),
+      );
     }
     return Promise.reject(new Error("Not Implemented"));
-  }
+  };
   // ...
   const store = {
     exists,
@@ -177,7 +194,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
     update,
     findMany,
     findOne,
-    delete: $delete
+    delete: $delete,
   };
   return store;
 }
