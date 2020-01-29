@@ -20,6 +20,9 @@ export class KeyError extends Error {
   constructor(message: string) {
     super(message);
   }
+  static invalidOrMissingKey(key: string) {
+    return new KeyError(`Invalid or missing key="${key}"`);
+  }
   static invalidOrMissigID(key: string, id?: any) {
     return new KeyError(`Invalid or missing "${key}"="${id}"`);
   }
@@ -33,22 +36,27 @@ export class KeyError extends Error {
 /**
  * Key encoder
  */
-export default function keyEncoder(name: string) {
+export default function keyEncoder(partitionName: string) {
   if (!isValidPartitionName)
-    throw new Error(`Patition name "${name}" is Not valid`);
-  const regex = new RegExp(`^${name}\/.*`, "i");
+    throw new Error(`Patition name "${partitionName}" is Not valid`);
+  const regex = new RegExp(`^${partitionName}\/.*`, "i");
   const enc = {
-    keyRoot: () => name + "/",
+    keyRoot: () => partitionName + "/",
     isMatch(key: Buffer | string) {
       if (typeof key === "string") return regex.test(key);
       return regex.test(key.toString());
     },
-    decodeKey(key: string | Buffer) {
-      if (typeof key === "string") return key.split(`${name}/`)[1];
-      return key.toString().split(`${name}/`)[1];
+    decodeKey(key: string | Buffer): string {
+      if (!key) throw new Error("@param key {string|buffer} required");
+      if (typeof key !== "string") {
+        return enc.decodeKey(key.toString());
+      }
+      const parts = key.toString().split(`${partitionName}/`);
+      if (parts[0] !== partitionName) throw KeyError.invalidOrMissingKey(parts[0]);
+      return parts[1];
     },
     encodeKey(id: string) {
-      return `${name}/${id}`;
+      return `${partitionName}/${id}`;
     },
     scopedStream(db: LevelUp) {
       return db
@@ -56,7 +64,7 @@ export default function keyEncoder(name: string) {
           gt: enc.keyRoot(),
           lt: enc.encodeKey(KEY_MAX_VALUE),
         });
-    }    
+    }
   };
   return enc;
 }
