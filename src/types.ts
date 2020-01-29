@@ -5,13 +5,17 @@ export type StoreRecord<T> = T & { $id?: string | undefined } & {
   };
 
 export interface Store<T> {
+  // exists query?
   idExists(id: T[keyof T] & string): Promise<boolean>;
-  add(record: StoreRecord<T>): Promise<any>;
-  update(data: Partial<StoreRecord<T>>): Promise<any>;
-  findOne(id: T[keyof T] & string): Promise<T>;
+  // Set? upsert ?
+  add(record: StoreRecord<T>): Promise<void>;
+  update(data: Partial<StoreRecord<T>>): Promise<void>;
+  // alow query ?
+  findOne(id: T[keyof T] & string): Promise<StoreRecord<T>>;
   findMany(
     query?: jsonquery.Query<T & { $key: string }>,
   ): Promise<StoreRecord<T>[]>;
+  // merge: remove clear as One ?
   remove(id: T[keyof T] & string): Promise<any>;
   clear(): Promise<any>;
 }
