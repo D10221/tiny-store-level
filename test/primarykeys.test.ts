@@ -1,7 +1,7 @@
-import { isValidKey, isValidPartitionName, KEY_MAX_VALUE } from "../src/keys";
+import { isValidID, isValidPartitionName, KEY_MAX_VALUE } from "../src/keys";
 
 function expectValidPrimaryKey(expected: boolean, value: string) {
-  if (isValidKey(value) !== expected) {
+  if (isValidID(value) !== expected) {
     throw new Error(`Expected ${value} to be valid=${expected}`);
   }
 }
@@ -31,13 +31,13 @@ describe("Primary Keys", () => {
         }
       }
     }
-    expect(isValidKey("")).toBe(false);
-    expect(isValidKey(" ")).toBe(false);
-    expect(isValidKey(null)).toBe(false);
-    expect(isValidKey(undefined)).toBe(false);
-    expect(isValidKey(1)).toBe(false);
-    expect(isValidKey({})).toBe(false);
-    expect(isValidKey(function() {})).toBe(false);
+    expect(isValidID("")).toBe(false);
+    expect(isValidID(" ")).toBe(false);
+    expect(isValidID(null)).toBe(false);
+    expect(isValidID(undefined)).toBe(false);
+    expect(isValidID(1)).toBe(false);
+    expect(isValidID({})).toBe(false);
+    expect(isValidID(function() {})).toBe(false);
   });
 
   it("is Valid PartitionName", () => {

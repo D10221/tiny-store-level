@@ -5,7 +5,7 @@
 
 export const KEY_MAX_VALUE = String.fromCharCode(0xdbff).repeat(64);
 /** forcing alphanumeric will enable easier gt & lt and reserved keys like $index? */
-export function isValidKey(x: any): x is string {
+export function isValidID(x: any): x is string {
   return typeof x === "string" && /^[a-zA-Z0-9]+$/.test(x);
 }
 export function isValidPartitionName(x: any): x is string {
@@ -16,6 +16,12 @@ export function isValidPartitionName(x: any): x is string {
 export class KeyError extends Error {
   constructor(message: string) {
     super(message);
+  }
+  static invalidOrMissig(key: string, id?: any) {
+    return new KeyError(`Invalid or missing "${key}"="${id}"`);
+  }
+  static idExists(key: string, id: string) {
+    return new KeyError(`Key exists "${key}=${id}"`);
   }
 }
 /**

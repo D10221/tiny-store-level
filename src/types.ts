@@ -26,7 +26,7 @@ export type ValueType =
 
 export type Schema<T> = {
   primaryKey?: boolean;
-  key: keyof T;
+  key: keyof T & string;
   notNull?: boolean | undefined;
   unique?: boolean | undefined;
   default?: any | undefined;

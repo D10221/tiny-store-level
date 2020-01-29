@@ -29,6 +29,9 @@ describe("Schema", () => {
         type: "boolean",
       },
     ]);
+    await store.add({ ok: true, $id: "1" });
+    const ret = await store.update({ ok: "", $id: "1" }).catch(x => x);
+    expect(ret).toBeInstanceOf(SchemaError);
   });
 
   it("Schema rejects bad types (ADD)", async () => {

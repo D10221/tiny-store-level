@@ -1,5 +1,4 @@
 import { Schema, StoreRecord } from "./types";
-
 export class SchemaError extends Error {
   constructor(message: string) {
     super(message);
@@ -86,15 +85,15 @@ export default function Schemas<T>(
     );
   }
   const primaryKey = primaryKeys[0];
-  // unique: true, notNull: false, default: () => undefined, type: "number"
+
   if (primaryKey.notNull === false) {
-    throw new SchemaError("Not Supported");
+    throw new SchemaError("primary key can't be null");
   }
   if (primaryKey.type && primaryKey.type !== "string") {
-    throw new SchemaError("Not Supported");
+    throw new SchemaError("primary key type can only be string");
   }
   if (primaryKey.default) {
-    throw new SchemaError("Not Supported");
+    throw new SchemaError("primary key default value: Not Implemented");
   }
 
   const schemaKeys = schemas.map(x => x.key) as (keyof T)[]; //.filter(x => x !== primaryKey.key) as (keyof T)[];
@@ -138,7 +137,6 @@ export default function Schemas<T>(
           new SchemaError(`${schemaName}: '${schema.key}' cannot be null`),
         );
 
-      // can't check null, if can't be null, should be checked before
       if (
         hasValue(record[schema.key]) &&
         !isValidType(schema, record[schema.key])

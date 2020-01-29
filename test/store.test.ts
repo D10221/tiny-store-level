@@ -38,23 +38,16 @@ describe("Level Store", () => {
       await store.add({ $id: `indexed${i}`, name: `x${i}` });
     }
     console.timeEnd("add:x10000");
-    console.time("get:x9999");
-    expect((await store.findOne("indexed9")).name).toBe("x9");
-    console.timeEnd("get:x9999");
-    console.time("find:x10000");
-    expect((await store.findMany()).length).toBe(10001);
-    console.timeEnd("find:x10000");
-  });
 
-  it("updates keeps other values", async () => {
-    const store = createStore<{ name: string; xyz: string }>(db, "things125");
-    {
-      const id = randomString();
-      await store.add({ $id: id, name: "bob", xyz: "z" });
-      expect(await store.findOne(id)).toMatchObject({ name: "bob", xyz: "z" });
-      await store.update({ $id: id, xyz: "y" }); // same name
-      expect(await store.findOne(id)).toMatchObject({ name: "bob", xyz: "y" });
-    }
+    const one = 9999;
+    console.time(`findOne:${one}`);
+    expect((await store.findOne(`indexed${one}`)).name).toBe(`x${one}`);
+    console.timeEnd(`findOne:${one}`);
+
+    const many = 10001;
+    console.time(`findMany:${many}`);
+    expect((await store.findMany()).length).toBe(many);
+    console.timeEnd(`findMany:${many}`);
   });
 
   it("is not found error", async () => {
@@ -89,5 +82,27 @@ describe("Level Store", () => {
     const things = createStore<{ name: string }>(db, "things");
     const x = await things.findOne("a").catch(error => error);
     expect(x.name).toBe("NotFoundError");
+  });
+
+  it("Updates: keeps other values", async () => {
+    const store = createStore<{ name: string; xyz: string }>(db, "things125");
+    {
+      const id = randomString();
+      await store.add({ $id: id, name: "bob", xyz: "z" });
+      expect(await store.findOne(id)).toMatchObject({ name: "bob", xyz: "z" });
+      await store.update({ $id: id, xyz: "y" }); // same name
+      expect(await store.findOne(id)).toMatchObject({ name: "bob", xyz: "y" });
+    }
+  });
+  it("Updates: rejects invalid Or missig key", async () => {
+    const store = createStore(db, "xxx-" + randomString());
+    await store.add({ $id: "1" });
+    const ret = await store
+      .update({
+        /* NO ID */
+      })
+      .catch(x => x);
+    expect(ret).toBeInstanceOf(KeyError);
+    expect(ret.message).toBe(KeyError.invalidOrMissig("$id").message);
   });
 });

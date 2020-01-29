@@ -1,7 +1,7 @@
 import jsonquery from "jsonquery";
 import { LevelUp } from "levelup";
 import { Transform } from "stream";
-import keyEncoder, { isValidKey, KEY_MAX_VALUE, KeyError } from "./keys";
+import keyEncoder, { isValidID, KEY_MAX_VALUE, KeyError } from "./keys";
 import schema from "./schema";
 import { Schema, Store, StoreRecord } from "./types";
 
@@ -35,14 +35,13 @@ export default function createStore<T extends { [key: string]: any } = {}>(
   db: LevelUp,
   partitionName: string,
   schemas: Schema<T>[] = [],
-): Store<T> {
+) {
   const { encode, decode, base, isMatch } = keyEncoder(partitionName);
   const { primaryKey, applyDefaultValues, validate } = schema(
     schemas,
     partitionName,
   );
-
-  const idExists = async (id: keyof T & string) => {
+  async function idExists(id: keyof T & string) {
     try {
       await db.get(encode(id));
       return true;
@@ -50,52 +49,50 @@ export default function createStore<T extends { [key: string]: any } = {}>(
       if (isNotFoundError(error)) return false;
       throw error;
     }
-  };
-
-  const findOne = async (id: keyof T & string): Promise<T> => {
+  }
+  async function findOne(id: keyof T & string): Promise<T> {
     try {
       const value = await db.get(encode(id));
       return value;
     } catch (error) {
       return Promise.reject(error);
     }
-  };
-  /** */
+  }
   async function add(data: StoreRecord<T>) {
     try {
-      if (!data) return Promise.reject(new Error("StoreRecord required"));
+      if (!data) throw new Error("StoreRecord required");
       const id = data[primaryKey.key];
-      if (!isValidKey(id)) {
-        return Promise.reject(
-          new KeyError(`Invalid id: ${JSON.stringify(id)}`),
-        );
-      }
-      if (await store.idExists(id))
-        return Promise.reject(new KeyError(`Duplicated id: "${id}"`));
+
+      if (!isValidID(id)) throw KeyError.invalidOrMissig(primaryKey.key, id);
+
+      if (await idExists(id)) throw KeyError.idExists(primaryKey.key, id);
+
       const value = applyDefaultValues(data);
-      await validate(value, store.findMany);
+      await validate(value, findMany);
       const ret = await db.put(encode(id), value);
       return ret;
     } catch (error) {
       return Promise.reject(error);
     }
   }
-  /** */
   async function update(data: Partial<StoreRecord<T>>) {
     try {
-      if (!data) return Promise.reject(new Error("StoreRecord required"));
+      if (!data) throw new Error("@param data required");
+
       const id = data[primaryKey.key];
-      if (!isValidKey(id)) return Promise.reject(new Error("Invalid key"));
-      const prev = await store.findOne(id as any); // throw not found
-      await validate({ [primaryKey.key]: id, ...data }, store.findMany);
-      const ret = await db.put(encode(id), { ...prev, ...data });
+      if (!isValidID(id)) throw KeyError.invalidOrMissig(primaryKey.key, id);
+
+      const prev = await findOne(id as any); // throw not found
+
+      await validate({ [primaryKey.key]: id, ...data }, findMany); // throws
+
+      const ret = await db.put(encode(id), { ...prev, ...data }); //key exception inscope
       return ret;
     } catch (error) {
       return Promise.reject(error);
     }
   }
-
-  const findMany = (query?: jsonquery.Query<T & { $key: string }>) => {
+  function findMany(query?: jsonquery.Query<T & { $key: string }>) {
     const transform = new Transform({
       objectMode: true,
       transform: function({ key, value }, _encoding_, callback) {
@@ -112,9 +109,9 @@ export default function createStore<T extends { [key: string]: any } = {}>(
     return toPromise<StoreRecord<T>>(
       query ? stream.pipe(jsonquery(query)) : stream,
     );
-  };
-  const clear = () =>
-    new Promise<any>((resolve, reject) => {
+  }
+  function clear() {
+    return new Promise<any>((resolve, reject) => {
       try {
         const stream = db.createReadStream();
         let result = 0;
@@ -135,14 +132,16 @@ export default function createStore<T extends { [key: string]: any } = {}>(
         return reject(error);
       }
     });
+  }
+  const remove = (id: keyof T & string) => db.del(encode(id));
   // ...
-  const store = {
+  const store: Store<T> = {
     idExists,
     add,
     update,
     findMany,
     findOne,
-    remove: (id: keyof T & string) => db.del(encode(id)),
+    remove,
     clear,
   };
   return store;
