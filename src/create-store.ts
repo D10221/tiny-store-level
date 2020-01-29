@@ -53,7 +53,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
   async function findOne(id: keyof T & string): Promise<T> {
     try {
       const value = await db.get(encode(id));
-      return value;
+      return { ...value, [primaryKey.key]: id };
     } catch (error) {
       return Promise.reject(error);
     }

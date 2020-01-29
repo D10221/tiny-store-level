@@ -19,7 +19,7 @@ describe("Level Store", () => {
     // ...
     expect(await things.clear()).toBe(1);
     expect(await things.add({ $id: "a", name: "aaa" })).toBe(undefined);
-    expect(await things.findOne("a")).toMatchObject({ name: "aaa" });
+    expect(await things.findOne("a")).toMatchObject({ name: "aaa", $id: "a" });
     expect(await things.remove("a")).toBe(undefined);
     expect(await things.findOne("a").catch(e => e.name)).toBe("NotFoundError");
   });
@@ -89,9 +89,17 @@ describe("Level Store", () => {
     {
       const id = randomString();
       await store.add({ $id: id, name: "bob", xyz: "z" });
-      expect(await store.findOne(id)).toMatchObject({ name: "bob", xyz: "z" });
+      expect(await store.findOne(id)).toMatchObject({
+        name: "bob",
+        xyz: "z",
+        $id: id,
+      });
       await store.update({ $id: id, xyz: "y" }); // same name
-      expect(await store.findOne(id)).toMatchObject({ name: "bob", xyz: "y" });
+      expect(await store.findOne(id)).toMatchObject({
+        name: "bob",
+        xyz: "y",
+        $id: id,
+      });
     }
   });
   it("Updates: rejects invalid Or missig key", async () => {
@@ -104,5 +112,19 @@ describe("Level Store", () => {
       .catch(x => x);
     expect(ret).toBeInstanceOf(KeyError);
     expect(ret.message).toBe(KeyError.invalidOrMissig("$id").message);
+  });
+
+  it("Works alt $id", async () => {
+    const store = createStore<{ xname: string; id: string }>(db, "things", [
+      { key: "id", primaryKey: true },
+    ]);
+    await store.clear();
+    expect(await store.add({ id: "a", xname: "aaa" })).toBe(undefined);
+    // ...
+    expect(await store.clear()).toBe(1);
+    expect(await store.add({ id: "a", xname: "aaa" })).toBe(undefined);
+    expect(await store.findOne("a")).toMatchObject({ xname: "aaa", id: "a" });
+    expect(await store.remove("a")).toBe(undefined);
+    expect(await store.findOne("a").catch(e => e.name)).toBe("NotFoundError");
   });
 });
