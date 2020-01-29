@@ -1,6 +1,6 @@
 import { Query } from "jsonquery";
 
-export type StoreRecord<T> = T & { $id?: string | undefined } & {
+export type StoreRecord<T> = T & { "_id_"?: string | undefined } & {
   [key in keyof T]: T[key];
 };
 

@@ -8,7 +8,7 @@ export const toPromise =
   <Data, Result>(reduce: (result: Result, data: Data) => Promise<Result>, acc: Result) =>
     (stream: NodeJS.ReadableStream) => new Promise<Result>((resolve, reject) => {
       try {
-        let result = acc;;
+        let result = acc;
         stream.on("data", async (data) => {
           result = await reduce(result, data);
         });

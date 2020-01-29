@@ -66,7 +66,8 @@ export default function createStore<T extends { [key: string]: any } = {}>(
 
       const value = applyDefaultValues(data);
       await validate(value, findMany);
-      const ret = await db.put(encodeKey(id), value);
+      const encoded = encodeKey(id);
+      const ret = await db.put(encoded, { ...value, [primaryKey.key]: id });
       return ret;
     } catch (error) {
       return Promise.reject(error);
@@ -82,7 +83,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
 
       const prev = await findOne(id as any); // throw not found
 
-      await validate({ [primaryKey.key]: id, ...data }, findMany); // throws
+      await validate({ ...data, [primaryKey.key]: id }, findMany); // throws
 
       const ret = await db.put(encodeKey(id), { ...prev, ...data }); //key exception inscope
       return ret;
@@ -90,28 +91,35 @@ export default function createStore<T extends { [key: string]: any } = {}>(
       return Promise.reject(error);
     }
   }
-
-  const transform = (convert: (kv: { key: string, value: any }) => any) => new Transform({
+  type TransformFunction<X extends any = any> = (
+    this: Transform,
+    chunk: X,
+    encoding: string,
+    callback: (error?: Error | null, data?: any) => void
+  ) => void;
+  const makeTransform = (transform: TransformFunction) => new Transform({
     objectMode: true,
-    transform: function (kv, _encoding_, callback) {
-      this.push(convert(kv));
-      callback();
-    },
+    transform,
   });
-
-  const decodeKeyValue = (schema: Schema<T>) => (kv: { key: string, value: any }) => {
-    const { key, value } = kv;
-    return ({ ...value, [schema.key]: decodeKey(key) })
-  }
-
-  const findMany: FindMany<T> = (query?: Query<StoreRecord<T>>) => {
-    if (query) {
-      return toPromise(reduce as Reduce<StoreRecord<T>>, [])
-        (scopedStream(db)
-          .pipe(transform(decodeKeyValue(primaryKey)))
-          .pipe(jsonquery(query)))
+  const decodeKeyValue: TransformFunction<{ key: string, value: any }> = function (data, _encoding, callback) {
+    try {
+      const { key, value } = data;
+      this.push(({ ...value, [primaryKey.key]: decodeKey(key) }));
+      callback();
+    } catch (error) {
+      callback(error);
     }
-    return toPromise(reduce as Reduce<StoreRecord<T>>, [])(scopedStream(db).pipe(transform(decodeKeyValue(primaryKey))))
+  }
+  const findMany: FindMany<T> = (query?: Query<StoreRecord<T>>) => {
+    const transform = makeTransform(decodeKeyValue);
+    const stream = scopedStream(db).pipe(transform);
+    const acc: Reduce<StoreRecord<T>> = reduce;
+    const _toPromise = toPromise(acc, []);
+    if (query) {
+      return _toPromise(stream.pipe(jsonquery(query)))
+    } else {
+      return _toPromise(stream);
+    }
   }
 
   const $delete: Delete<T> = async (idOrquery) => {
@@ -139,7 +147,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
       });
     }
     if (typeof idOrquery === "string") {
-      // its an $ID
+      // its an _id_
       if (!(await exists(idOrquery))) {
         return Promise.reject(KeyError.idNotFound(idOrquery))
       }
@@ -157,7 +165,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
         return result + 1;
       };
       return toPromise(deletes, 0)(scopedStream(db)
-        .pipe(transform(decodeKeyValue(primaryKey)))
+        .pipe(makeTransform(decodeKeyValue))
         .pipe(jsonquery(idOrquery)));
     }
     return Promise.reject(new Error("Not Implemented"));

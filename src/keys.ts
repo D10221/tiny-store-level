@@ -37,9 +37,16 @@ export class KeyError extends Error {
  * Key encoder
  */
 export default function keyEncoder(partitionName: string) {
+
   if (!isValidPartitionName)
     throw new Error(`Patition name "${partitionName}" is Not valid`);
+
   const regex = new RegExp(`^${partitionName}\/.*`, "i");
+
+  function getParts(x: string) {
+    return x.toString().split("/");
+  }
+  
   const enc = {
     keyRoot: () => partitionName + "/",
     isMatch(key: Buffer | string) {
@@ -47,15 +54,21 @@ export default function keyEncoder(partitionName: string) {
       return regex.test(key.toString());
     },
     decodeKey(key: string | Buffer): string {
-      if (!key) throw new Error("@param key {string|buffer} required");
+      if (!key) {
+        throw new Error("@param key {string|buffer} required");
+      }
       if (typeof key !== "string") {
         return enc.decodeKey(key.toString());
       }
-      const parts = key.toString().split(`${partitionName}/`);
-      if (parts[0] !== partitionName) throw KeyError.invalidOrMissingKey(parts[0]);
-      return parts[1];
+      const [root, id] = getParts(key);
+      if (root !== partitionName) throw KeyError.invalidOrMissingKey(root);
+      if (!isValidID(id)) throw KeyError.invalidOrMissigID(root, id);
+      return id;
     },
     encodeKey(id: string) {
+      if (getParts(id)[0] === partitionName) {
+        throw new Error("Wtf");
+      }
       return `${partitionName}/${id}`;
     },
     scopedStream(db: LevelUp) {

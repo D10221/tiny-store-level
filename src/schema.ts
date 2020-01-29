@@ -39,7 +39,7 @@ function defaultValue<T>(schema: Schema<T>) {
   return isFunction(schema.default) ? schema.default() : schema.default;
 }
 const DEFAULT_SCHEMA: Schema<StoreRecord<any>> = {
-  key: "$id",
+  key: "_id_",
   primaryKey: true,
   notNull: true,
   type: "string",
@@ -51,18 +51,18 @@ export default function Schemas<T>(
   schemas: Schema<StoreRecord<T>>[] = [],
   schemaName: string,
 ) {
-  // Assign default $id
+  // Assign default _id_
   schemas =
     schemas && schemas.length
       ? schemas.find(
           x =>
             Boolean(x.primaryKey) ||
-            // override $id and no alt primary key provided results in NO primary key
+            // override _id_ and no alt primary key provided results in NO primary key
             x.key === DEFAULT_SCHEMA.key,
         )
         ? schemas
         : schemas.concat(DEFAULT_SCHEMA)
-      : [DEFAULT_SCHEMA]; // Assign default $id
+      : [DEFAULT_SCHEMA]; // Assign default _id_
   // find dupl keys
   const dups = schemas.filter(
     (s, i, all) =>
@@ -98,7 +98,7 @@ export default function Schemas<T>(
 
   const schemaKeys = schemas.map(x => x.key) as (keyof T)[]; //.filter(x => x !== primaryKey.key) as (keyof T)[];
   /**
-   *  Dont validate $id
+   *  Dont validate _id_
    */
   const validate = async (
     record: Partial<StoreRecord<T>>, // Record

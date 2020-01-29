@@ -1,7 +1,7 @@
 import createStore, { MemDb } from "../src";
 import { SchemaError } from "../src/schema";
-import { toDate } from "./dates";
-import randomString from "./random-string";
+import { toDate } from "./util/dates";
+import randomString from "./util/random-string";
 
 interface Thing extends Object {
   name: string;
@@ -14,7 +14,7 @@ describe("Schema", () => {
     const store = createStore<Thing>(db, "things4", [
       { key: "name", notNull: true, unique: true },
     ]);
-    const x = await store.add({ $id: "a", x: "aaa" } as any).catch(e => e);
+    const x = await store.add({ _id_: "a", x: "aaa" } as any).catch(e => e);
     expect(x).toBeInstanceOf(SchemaError);
   });
 
@@ -29,8 +29,8 @@ describe("Schema", () => {
         type: "boolean",
       },
     ]);
-    await store.add({ ok: true, $id: "1" });
-    const ret = await store.update({ ok: "", $id: "1" }).catch(x => x);
+    await store.add({ ok: true, _id_: "1" });
+    const ret = await store.update({ ok: "", _id_: "1" }).catch(x => x);
     expect(ret).toBeInstanceOf(SchemaError);
   });
 
@@ -46,7 +46,7 @@ describe("Schema", () => {
           type: ["string", "number"],
         },
       ])
-        .add({ $id: randomString(), name: true })
+        .add({ _id_: randomString(), name: true })
         .catch(e => e),
     ).toBeInstanceOf(SchemaError);
 
@@ -61,7 +61,7 @@ describe("Schema", () => {
           type: ["string", "number"],
         },
       ])
-        .add({ $id: randomString(), name: {} })
+        .add({ _id_: randomString(), name: {} })
         .catch(e => e),
     ).toBeInstanceOf(SchemaError);
 
@@ -76,7 +76,7 @@ describe("Schema", () => {
           type: ["string", "number"],
         },
       ])
-        .add({ $id: randomString(), name: null })
+        .add({ _id_: randomString(), name: null })
         .catch(e => e),
     ).toBeInstanceOf(SchemaError);
 
@@ -91,7 +91,7 @@ describe("Schema", () => {
           type: ["string", "number"],
         },
       ])
-        .add({ $id: randomString(), name: undefined })
+        .add({ _id_: randomString(), name: undefined })
         .catch(e => e),
     ).toBeInstanceOf(SchemaError);
 
@@ -106,7 +106,7 @@ describe("Schema", () => {
           type: ["string", "number"],
         },
       ])
-        .add({ $id: randomString(), name: function() {} })
+        .add({ _id_: randomString(), name: function() {} })
         .catch(e => e),
     ).toBeInstanceOf(SchemaError);
   });
@@ -128,7 +128,7 @@ describe("Schema", () => {
       { key: "createdAt", default: () => new Date() },
     ]);
     const id = randomString();
-    await store.add({ $id: id, name: null as any });
+    await store.add({ _id_: id, name: null as any });
     const found = await store.findOne(id);
 
     expect(found.name).toBe(newName);
@@ -147,11 +147,11 @@ describe("Schema", () => {
     {
       const name1 = randomString();
       const id1 = randomString();
-      await store.add({ $id: id1, name: name1 });
+      await store.add({ _id_: id1, name: name1 });
       const name2 = randomString();
-      await store.add({ $id: randomString(), name: name2 });
+      await store.add({ _id_: randomString(), name: name2 });
       expect(
-        await store.update({ $id: id1, name: name2 }).catch(e => e),
+        await store.update({ _id_: id1, name: name2 }).catch(e => e),
       ).toBeInstanceOf(SchemaError);
     }
   });
@@ -166,16 +166,16 @@ describe("Schema", () => {
     {
       const newName = "xname-" + randomString();
       const id = randomString();
-      await store.add({ $id: id, xname: newName });
-      await store.update({ $id: id, xname: newName }); // same name
+      await store.add({ _id_: id, xname: newName });
+      await store.update({ _id_: id, xname: newName }); // same name
       expect((await store.findOne(id)).xname).toBe(newName);
     }
   });
 
   it("Not primary (override)", async () => {
     expect(() => {
-      return createStore<{ $id: string }>(db, randomString(), [
-        { key: "$id" }, // Not primary , but $id is been overriden
+      return createStore<{ _id_: string }>(db, randomString(), [
+        { key: "_id_" }, // Not primary , but _id_ is been overriden
       ]);
     }).toThrow(SchemaError);
   });
