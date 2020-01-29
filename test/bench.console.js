@@ -1,4 +1,6 @@
-const { default: createStore, MemDb } = require("../dist");
+const { default: createStore } = require("../dist");
+const { MemDb } = require("./util/level");
+
 const assert = require("assert");
 
 function randomString() {

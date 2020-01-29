@@ -1,7 +1,8 @@
 /**
  * @type {import("../").CreateStore}
  */
-const { default: createStore, MemDb } = require("../");
+const { default: createStore } = require("../");
+const { MemDb } = require("./util/level");
 
 function randomString() {
   return require("crypto")

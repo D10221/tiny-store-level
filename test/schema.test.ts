@@ -1,7 +1,8 @@
-import createStore, { MemDb } from "../src";
+import createStore from "../src";
 import { SchemaError } from "../src/schema";
 import { toDate } from "./util/dates";
 import randomString from "./util/random-string";
+import { MemDb } from "./util/level";
 
 interface Thing extends Object {
   name: string;

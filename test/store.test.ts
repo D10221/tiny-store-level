@@ -1,5 +1,6 @@
-import createStore, { MemDb } from "../src";
+import createStore from "../src";
 import { KeyError } from "../src/keys";
+import { MemDb } from "./util/level";
 import randomString from "./util/random-string";
 
 let db = MemDb();
@@ -76,12 +77,14 @@ describe("Level Store", () => {
     expect(ret.message).toBe(KeyError.invalidOrMissigID("_id_").message);
   });
   it("Works alt _id_", async () => {
-    const store = createStore<{ xname: string; id: string }>(db, randomString(), [
-      { key: "id", primaryKey: true },
-    ]);
+    const store = createStore<{ xname: string; id: string }>(
+      db,
+      randomString(),
+      [{ key: "id", primaryKey: true }],
+    );
     expect(await store.delete("*")).toBe(0);
     expect(await store.add({ id: "a", xname: "aaa" })).toBe(undefined);
-    expect(await store.findMany()).toMatchObject([{ id: "a", xname: "aaa" }])
+    expect(await store.findMany()).toMatchObject([{ id: "a", xname: "aaa" }]);
     expect(await store.delete("*")).toBe(1);
     expect(await store.add({ id: "a", xname: "aaa" })).toBe(undefined);
     expect(await store.findOne("a")).toMatchObject({ xname: "aaa", id: "a" });

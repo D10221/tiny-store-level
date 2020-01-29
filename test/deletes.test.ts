@@ -1,4 +1,5 @@
-import createStore, { MemDb } from "../src";
+import createStore from "../src";
+import { MemDb } from "./util/level";
 import randomString from "./util/random-string";
 
 let db = MemDb();

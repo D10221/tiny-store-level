@@ -1,4 +1,5 @@
-const { default: createStore, MemDb } = require("../dist");
+const { default: createStore } = require("../dist");
+const {MemDb} = require("./util/level");
 
 function randomString() {
   return require("crypto")
