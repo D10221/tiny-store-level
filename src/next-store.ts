@@ -63,6 +63,7 @@ const toPromise = <Data, Result>(
                 reject(error);
             }
         });
+
 const DEFAULT_SCHEMA: Schema<StoreRecord<any>> = {
     key: "id",
     primaryKey: true,
@@ -79,21 +80,11 @@ export class NotImplementedError extends Error {
         super(`"${what}" Not Implemented`);
     }
 }
-const memoize = <P, R>(f: (arg: P) => R) => {
-    let cache: any[] = [undefined, undefined];
-    return (arg: P): R => {
-        if (arg === cache[0]) return cache[1];
-        cache = [arg, f(arg)];
-        return cache[1];
-    };
-};
-const keys = memoize(Object.keys);
-
 const fromMap = <T>(schemas?: Schemap<StoreRecord<T>>) => {
     schemas =
         schemas ||
         ({ [DEFAULT_SCHEMA.key]: DEFAULT_SCHEMA } as Schemap<StoreRecord<T>>);
-    const schemaKeys: (keyof StoreRecord<T>)[] = keys(schemas) as any;
+    const schemaKeys: (keyof StoreRecord<T>)[] = Object.keys(schemas) as any;
     const schemaList = schemaKeys.map(k => schemas![k]);
     // default schema
     if (schemaList.filter(isKey).length < 1) {
@@ -128,7 +119,6 @@ const fromList = <T>(input: Schema<StoreRecord<T>>[]) => {
     };
 };
 
-const filter = memoize(<X>(xxx: X[]) => Array.prototype.filter.bind(xxx));
 
 const nextStore = <T>(_db: LevelUp, patitionName: string, schemapOrList?: Schemap<StoreRecord<T>> | Schema<StoreRecord<T>>[]) => {
 
@@ -137,7 +127,7 @@ const nextStore = <T>(_db: LevelUp, patitionName: string, schemapOrList?: Schema
         : fromMap(schemapOrList);
 
     const sublevel = sublevelDown(_db, patitionName, { valueEncoding: 'json' });
-    const primaryKeys = filter(schemaList)(isKey);
+    const primaryKeys = schemaList.filter(isKey);
     const primaryKey: Schema<StoreRecord<T>> = primaryKeys[0];
 
     const exists: Exists<StoreRecord<T>> = async (queryOrId) => {
@@ -186,7 +176,6 @@ const nextStore = <T>(_db: LevelUp, patitionName: string, schemapOrList?: Schema
             return Promise.reject(error);
         }
     };
-
     const update: Update<T> = async (data: Partial<StoreRecord<T>>) => {
         try {
             if (!data) throw new Error("@param data required");
