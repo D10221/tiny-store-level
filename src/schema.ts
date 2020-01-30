@@ -1,4 +1,4 @@
-import { Schema, StoreRecord, Schemap, SchemaValueType } from "./types";
+import { Schema, StoreRecord, Schemap, SchemaValueType, SchemaValueTypes } from "./types";
 import {
   arrify,
   isFunction,
@@ -11,16 +11,6 @@ export class SchemaError extends Error {
     super(message);
   }
 }
-
-const schemaValueTypes: SchemaValueType[] = [
-  "array",
-  "boolean",
-  "date",
-  "number",
-  "object",
-  "string",
-];
-
 function isValidType(schema: Schema<any>, value: any) {
   function check(type: SchemaValueType | SchemaValueType[] | undefined) {
     if (!schema.type) return true;
@@ -167,7 +157,7 @@ export default function Schemas<T>(
     .filter(x => Boolean(x.type))
     .map(x => x.type)
     .map(arrify)) {
-    if (xTypes.find(x => x && schemaValueTypes.indexOf(x) === -1)) {
+    if (xTypes.find(x => x && SchemaValueTypes.indexOf(x) === -1)) {
       throw new Error(`Invalid schema type:[${xTypes.join(" ,")}]`);
     }
   }

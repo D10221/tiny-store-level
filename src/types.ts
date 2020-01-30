@@ -1,14 +1,22 @@
 import { Query } from "jsonquery";
 export type SchemaValueType =
-  | "string"
-  | "number"
-  | "boolean"
-  | "object"
   | "array"
-  | "date";
+  | "boolean"
+  | "date"
+  | "number"
+  | "object"
+  | "string";
+export const SchemaValueTypes: SchemaValueType[] = [
+  "array",
+  "boolean",
+  "date",
+  "number",
+  "object",
+  "string",
+];
 export type Schema<T> = {
-  primaryKey?: boolean;
   key: keyof T & string;
+  primaryKey?: boolean;
   notNull?: boolean | undefined;
   unique?: boolean | undefined;
   default?: any | undefined;

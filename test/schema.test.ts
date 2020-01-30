@@ -133,7 +133,7 @@ describe("Schema", () => {
     expect(toDate(found.createdAt).getDate()).toBe(new Date().getDate());
   });
 
-  it("updates not dup name", async () => {
+  it("update: reject dup key", async () => {
     const store = createStore<{
       name: string;
       createdAt?: string | number | Date | undefined;
