@@ -13,7 +13,7 @@
     "test": "jest --env=node --ci",
     "pretty": "prettier src**/*.*  test/**/* *.json *.js *.md --write",
     "build": "rimraf dist && tsc -p .",
-    "prepublish": "yarn build && yarn test && yarn pretty",
+    "-prepublish": "yarn build && yarn test && yarn pretty",
     "bench": "cross-env NODE_ENV=production 0x -o test/bench.js",
     "bench:light": "cross-env NODE_ENV=prodution && node test/bench.console.js >> bench.console.log",
     "coverage": "jest --ci --collect-coverage --runInBand --no-cache "
@@ -23,7 +23,8 @@
     "jsonquery": "0.2.0",
     "leveldown": "5.4.1",
     "levelup": "4.3.2",
-    "memdown": "5.1.0"
+    "memdown": "5.1.0",
+    "subleveldown": "^4.1.4"
   },
   "devDependencies": {
     "0x": "4.9.1",
@@ -35,6 +36,7 @@
     "@types/levelup": "4.3.0",
     "@types/memdown": "3.0.0",
     "@types/rimraf": "2.0.3",
+    "@types/subleveldown": "^4.1.0",
     "cross-env": "7.0.0",
     "jest": "25.1.0",
     "prettier": "1.19.1",
