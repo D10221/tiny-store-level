@@ -14,7 +14,7 @@ import {
   Exists,
   Schemap,
 } from "./types";
-import { toPromise, concat, count, PromiseReducer } from "./streams";
+import { toPromise, concat, count } from "./streams";
 
 class NotImplementedError extends Error {
   constructor(what: string) {

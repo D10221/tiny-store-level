@@ -4,17 +4,13 @@ import { toDate } from "./util/dates";
 import randomString from "./util/random-string";
 import { MemDb } from "./util/level";
 
-interface Thing extends Object {
-  name: string;
-}
-
 let db = MemDb();
 
 describe("Schema", () => {
   it("Schema rejects not in schema", async () => {
-    const store = createStore<Thing>(db, "things4", [
-      { key: "name", notNull: true, unique: true },
-    ]);
+    const store = createStore<{
+      name: string;
+    }>(db, "things4", [{ key: "name", notNull: true, unique: true }]);
     const x = await store.add({ _id_: "a", x: "aaa" } as any).catch(e => e);
     expect(x).toBeInstanceOf(SchemaError);
   });

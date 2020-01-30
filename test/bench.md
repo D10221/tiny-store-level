@@ -1,4 +1,4 @@
-leveldown += 50% 
+leveldown += 50%
 
 i7 linux
 
@@ -42,7 +42,7 @@ i7 Linux
       findOne:9999: 1ms
     console.time test/store.test.ts:38
       findMany:10001: 493ms
-  
+
     // ...
     console.time test/store.test.ts:23
       add:1: 2ms
@@ -61,8 +61,8 @@ i7 Linux
       findOne:9999: 0ms
     console.time test/store.test.ts:38
       findMany:10001: 459ms
-    
-    // memoize , jest --no-cache 
+
+    // memoize , jest --no-cache
     console.time test/store.test.ts:23
       add:1: 0ms
     console.time test/store.test.ts:28
@@ -78,3 +78,10 @@ i7 Linux
     findOne:9999: 0.509ms
     findMany:10000: 469.371ms
     Done in 1.48s.
+
+win10 i9
+
+add:1: 0.419ms
+add:x10000: 532.36ms
+findOne:9999: 0.267ms
+findMany:10000: 272.671ms

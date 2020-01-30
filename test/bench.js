@@ -3,9 +3,7 @@ const encoding = require("encoding-down");
 const levelup = require("levelup");
 const MemDown = require("memdown");
 
-const MemDb = () =>
-  levelup(encoding(new MemDown(), { valueEncoding: "json" }));
-
+const MemDb = () => levelup(encoding(new MemDown(), { valueEncoding: "json" }));
 
 function randomString() {
   return require("crypto")
