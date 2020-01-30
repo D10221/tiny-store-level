@@ -1,28 +1,29 @@
 import { Transform } from "stream";
-export const isNullOrUndefined = (x: any): boolean => x === null || x === undefined;
+export const isNullOrUndefined = (x: any): boolean =>
+  x === null || x === undefined;
 export const hasValue = (x: any) => !isNullOrUndefined(x);
 export const isFunction = (x: any) => typeof x === "function";
 export const arrify = <T>(x: T | T[]): T[] => {
-    return isNullOrUndefined(x) ? [] : Array.isArray(x) ? x : [x];
+  return isNullOrUndefined(x) ? [] : Array.isArray(x) ? x : [x];
 };
 export type TransformFunction<X extends any = any> = (
-    this: Transform,
-    chunk: X,
-    encoding: string,
-    callback: (error?: Error | null, data?: any) => void,
+  this: Transform,
+  chunk: X,
+  encoding: string,
+  callback: (error?: Error | null, data?: any) => void,
 ) => void;
 export const makeTransform = (transform: TransformFunction) =>
-    new Transform({
-        objectMode: true,
-        transform,
-    });
+  new Transform({
+    objectMode: true,
+    transform,
+  });
 export const memoize = <P, R>(f: (arg: P) => R) => {
-    let cache: any[] = [undefined, undefined];
-    return (arg: P): R => {
-        if (arg === cache[0]) return cache[1];
-        cache = [arg, f(arg)];
-        return cache[1];
-    };
+  let cache: any[] = [undefined, undefined];
+  return (arg: P): R => {
+    if (arg === cache[0]) return cache[1];
+    cache = [arg, f(arg)];
+    return cache[1];
+  };
 };
 export class NotImplementedError extends Error {
   constructor(what: string) {

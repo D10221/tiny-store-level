@@ -13,7 +13,14 @@ import {
   Exists,
   Schemap,
 } from "./types";
-import { TransformFunction, NotImplementedError, makeTransform, concat, toPromise, count } from "./util";
+import {
+  TransformFunction,
+  NotImplementedError,
+  makeTransform,
+  concat,
+  toPromise,
+  count,
+} from "./util";
 
 function isNotFoundError(error: Error): error is Error {
   return error instanceof Error && error.name === "NotFoundError";
@@ -26,12 +33,15 @@ export default function createStore<T extends { [key: string]: any } = {}>(
   partitionName: string,
   schemas?: Schemap<StoreRecord<T>> | Schema<StoreRecord<T>>[],
 ) {
-  const { decodeKey, encodeKey, scopedStream } = keyEncoder(partitionName); 
-  const { primaryKey, validate, applyDefaults } = schema(partitionName, schemas);
+  const { decodeKey, encodeKey, scopedStream } = keyEncoder(partitionName);
+  const { primaryKey, validate, applyDefaults } = schema(
+    partitionName,
+    schemas,
+  );
   const decodeKeyValue: TransformFunction<{
     key: string;
     value: any;
-  }> = function (data, _encoding, callback) {
+  }> = function(data, _encoding, callback) {
     try {
       const { key, value } = data;
       this.push({ ...value, [primaryKey.key]: decodeKey(key) });
@@ -79,10 +89,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
       if (!force && (await exists(id)))
         throw KeyError.idExists(primaryKey.key, id);
 
-      const value = await validate(
-        applyDefaults(data),
-        findMany,
-      );
+      const value = await validate(applyDefaults(data), findMany);
       const ret = await db.put(encodeKey(id), {
         ...value,
         [primaryKey.key]: id,

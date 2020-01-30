@@ -1,12 +1,25 @@
 import { Schema, StoreRecord, Schemap, SchemaValueType } from "./types";
-import { arrify, isFunction, memoize, isNullOrUndefined, hasValue } from "./util";
+import {
+  arrify,
+  isFunction,
+  memoize,
+  isNullOrUndefined,
+  hasValue,
+} from "./util";
 export class SchemaError extends Error {
   constructor(message: string) {
     super(message);
   }
 }
 
-const schemaValueTypes: SchemaValueType[] = ["array", "boolean", "date", "number", "object", "string"];
+const schemaValueTypes: SchemaValueType[] = [
+  "array",
+  "boolean",
+  "date",
+  "number",
+  "object",
+  "string",
+];
 
 function isValidType(schema: Schema<any>, value: any) {
   function check(type: SchemaValueType | SchemaValueType[] | undefined) {
@@ -112,7 +125,7 @@ export default function Schemas<T>(
         `[${keysNotInSchema(record)
           .map(x => `"${x}"`)
           .join(", ")}] Not in Schema: ` +
-        ` ${schemaKeys.map(x => `"${x}"`).join(", ")} `,
+          ` ${schemaKeys.map(x => `"${x}"`).join(", ")} `,
       );
     }
   };
@@ -149,8 +162,11 @@ export default function Schemas<T>(
   const isSchema = memoize((key: string) =>
     Boolean(schemaKeys.find(x => x === key)),
   );
-  // 
-  for (const xTypes of schemaList.filter(x => Boolean(x.type)).map(x => x.type).map(arrify)) {
+  //
+  for (const xTypes of schemaList
+    .filter(x => Boolean(x.type))
+    .map(x => x.type)
+    .map(arrify)) {
     if (xTypes.find(x => x && schemaValueTypes.indexOf(x) === -1)) {
       throw new Error(`Invalid schema type:[${xTypes.join(" ,")}]`);
     }
@@ -168,7 +184,9 @@ export default function Schemas<T>(
       for (const schemaKey of schemaKeys) {
         const schema = schemas[schemaKey];
         if (schema.notNull && isNullOrUndefined(record[schema.key]))
-          throw new SchemaError(`${schemaName}: '${schema.key}' cannot be null`)
+          throw new SchemaError(
+            `${schemaName}: '${schema.key}' cannot be null`,
+          );
         if (schema.type)
           if (hasValue(record[schema.key])) {
             if (!isValidType(schema, record[schema.key]))
@@ -176,7 +194,7 @@ export default function Schemas<T>(
                 `${schemaName}: '${schema.key}' expected Type '${arrify(
                   schema.type,
                 ).join("|")} ' got '${typeof record[schema.key]} '`,
-              )
+              );
           }
         // ...
         if (schema.unique) {
@@ -184,7 +202,10 @@ export default function Schemas<T>(
           const prev = records
             .filter(x => x[primaryKey.key] !== record[primaryKey.key])
             .find(x => x[schemaKey] === record[schemaKey]);
-          if (Boolean(prev)) throw new SchemaError(`${schemaName}: '${schemaKey}' 'Must be unique'`);
+          if (Boolean(prev))
+            throw new SchemaError(
+              `${schemaName}: '${schemaKey}' 'Must be unique'`,
+            );
         }
       }
       return record;

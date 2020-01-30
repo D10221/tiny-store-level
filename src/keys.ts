@@ -52,7 +52,7 @@ export default function keyEncoder(partitionName: string) {
         gt: enc.keyRoot,
         lt: enc.encodeKey(ID_MAX_VALUE),
       });
-    }
+    },
   };
   return enc;
 }

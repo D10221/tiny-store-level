@@ -11,14 +11,14 @@ export type Schema<T> = {
   key: keyof T & string;
   notNull?: boolean | undefined;
   unique?: boolean | undefined;
-  default?: any | undefined;  
+  default?: any | undefined;
   type?: SchemaValueType | SchemaValueType[];
 };
 export type Schemap<T> = { [key in keyof T]: Schema<T> };
 export type ID<T> = T[keyof T] & string;
 export type StoreRecord<T> = T & { id?: string | undefined } & {
-  [key in keyof T]: T[key];
-};
+    [key in keyof T]: T[key];
+  };
 export type Exists<T> = (
   idOrQuery: ID<T> | Query<StoreRecord<T>>,
 ) => Promise<boolean>;
