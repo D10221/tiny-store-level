@@ -1,4 +1,5 @@
-import { Schema, StoreRecord } from "./types";
+import { Schema, StoreRecord, Schemap } from "./types";
+import memoize from "./memoize";
 export class SchemaError extends Error {
   constructor(message: string) {
     super(message);
@@ -35,7 +36,7 @@ function isValidType<T>(schema: Schema<T>, value: any) {
   }
   return false;
 }
-function defaultValue<T>(schema: Schema<T>) {
+function defaultValue(schema: Schema<any>) {
   return isFunction(schema.default) ? schema.default() : schema.default;
 }
 const DEFAULT_SCHEMA: Schema<StoreRecord<any>> = {
@@ -44,27 +45,59 @@ const DEFAULT_SCHEMA: Schema<StoreRecord<any>> = {
   notNull: true,
   type: "string",
 };
+const keys = memoize(Object.keys);
+const isKey = (x: Schema<StoreRecord<any>>) => Boolean(x.primaryKey);
+const not = <X>(f: (x: X) => boolean) => memoize((args: X) => !f(args));
+const filter = memoize(<X>(xxx: X[]) => Array.prototype.filter.bind(xxx));
+
+const fromMap = <T>(schemas?: Schemap<StoreRecord<T>>) => {
+  schemas =
+    schemas ||
+    ({ [DEFAULT_SCHEMA.key]: DEFAULT_SCHEMA } as Schemap<StoreRecord<T>>);
+  const schemaKeys: (keyof StoreRecord<T>)[] = keys(schemas) as any;
+  const schemaList = schemaKeys.map(k => schemas![k]);
+  // default schema
+  if (schemaList.filter(isKey).length < 1) {
+    schemas = {
+      ...schemas,
+      [DEFAULT_SCHEMA.key]: DEFAULT_SCHEMA,
+    };
+  }
+  return {
+    schemas,
+    schemaList,
+    schemaKeys,
+  };
+};
+
+const fromList = <T>(input: Schema<StoreRecord<T>>[]) => {
+  const schemaList = input || [DEFAULT_SCHEMA];
+  // default schema
+  if (schemaList.filter(isKey).length < 1) {
+    schemaList.push(DEFAULT_SCHEMA);
+  }
+  const schemaKeys = schemaList.map(x => x.key) as (keyof StoreRecord<T>)[];
+  return {
+    schemas: schemaKeys.reduce((out, key) => {
+      out[key] = schemaList.find(x => x.key === key)!;
+      return out;
+    }, {} as Schemap<StoreRecord<T>>),
+    schemaList,
+    schemaKeys,
+  };
+};
 /**
  *
  */
 export default function Schemas<T>(
-  schemas: Schema<StoreRecord<T>>[] = [],
   schemaName: string,
+  schemapOrList?: Schemap<StoreRecord<T>> | Schema<StoreRecord<T>>[],
 ) {
-  // Assign default _id_
-  schemas =
-    schemas && schemas.length
-      ? schemas.find(
-          x =>
-            Boolean(x.primaryKey) ||
-            // override _id_ and no alt primary key provided results in NO primary key
-            x.key === DEFAULT_SCHEMA.key,
-        )
-        ? schemas
-        : schemas.concat(DEFAULT_SCHEMA)
-      : [DEFAULT_SCHEMA]; // Assign default _id_
+  const { schemas, schemaList, schemaKeys } = Array.isArray(schemapOrList)
+    ? fromList(schemapOrList)
+    : fromMap(schemapOrList);
   // find dupl keys
-  const dups = schemas.filter(
+  const dups = schemaList.filter(
     (s, i, all) =>
       all
         .slice(i + 1)
@@ -74,17 +107,29 @@ export default function Schemas<T>(
   if (dups && dups.length) {
     throw new SchemaError("Dup keys " + dups.map(x => x.key).join(", "));
   }
+  const keysNotInSchema = (o: {}) => filter(keys(o))(not(isSchema));
 
-  const primaryKeys = schemas.filter(x => Boolean(x.primaryKey));
+  const rejectNotInSchema = (record: Partial<StoreRecord<T>>) => {
+    if (keysNotInSchema(record).length > 0) {
+      throw new SchemaError(
+        `[${keysNotInSchema(record)
+          .map(x => `"${x}"`)
+          .join(", ")}] Not in Schema: ` +
+          ` ${schemaKeys.map(x => `"${x}"`).join(", ")} `,
+      );
+    }
+  };
+
+  const primaryKeys = filter(schemaList)(isKey);
   if (primaryKeys.length < 1) {
     throw new SchemaError("Missing primary key");
   }
   if (primaryKeys.length > 1) {
     throw new SchemaError(
-      `Too Many primary keys [${schemas.map(x => x.key).join(" ,")}]`,
+      `Too Many primary keys [${schemaList.map(x => x.key).join(" ,")}]`,
     );
   }
-  const primaryKey = primaryKeys[0];
+  const primaryKey: Schema<StoreRecord<T>> = primaryKeys[0];
 
   if (primaryKey.notNull === false) {
     throw new SchemaError("primary key can't be null");
@@ -96,7 +141,21 @@ export default function Schemas<T>(
     throw new SchemaError("primary key default value: Not Implemented");
   }
 
-  const schemaKeys = schemas.map(x => x.key) as (keyof T)[]; //.filter(x => x !== primaryKey.key) as (keyof T)[];
+  let untyped = false;
+  if (schemaKeys.length === 1) {
+    if (schemaKeys[0] === primaryKey.key) {
+      // if primary is the Key Only schema, asumme type is untytped.
+      untyped = true;
+    } else {
+      throw new Error(
+        `Expected primary key ${primaryKey.key} instead of ${schemaKeys[0]} `,
+      );
+    }
+  }
+  const isSchema = memoize((key: string) =>
+    Boolean(schemaKeys.find(x => x === key)),
+  );
+
   /**
    *  Dont validate _id_
    */
@@ -104,33 +163,12 @@ export default function Schemas<T>(
     record: Partial<StoreRecord<T>>, // Record
     findMany: () => Promise<StoreRecord<T>[]>,
   ): Promise<void> => {
-    if (schemaKeys.length === 1) {
-      if (schemaKeys[0] === primaryKey.key) {
-        // if primary is the Key Only schema, asumme type is untytped.
-        return;
-      }
-      return Promise.reject(
-        new Error(
-          `Expected primary key ${primaryKey.key} instead of ${schemaKeys[0]} `,
-        ),
-      );
-    }
-
+    if (untyped) return Promise.resolve();
     // find data keys not in schema
-    const dataKeys = Object.keys(record).filter(
-      key => !Boolean(schemaKeys.find(x => x === key)),
-    );
-    if (dataKeys.length > 0) {
-      return Promise.reject(
-        new SchemaError(
-          `[${dataKeys.map(x => `"${x}"`).join(", ")}] Not in Schema: ` +
-            ` ${schemaKeys.map(x => `"${x}"`).join(", ")} `,
-        ),
-      );
-    }
+    rejectNotInSchema(record);
 
     for (const schemaKey of schemaKeys) {
-      const schema = schemas.find(x => x.key === schemaKey)!;
+      const schema = schemas![schemaKey]!;
 
       if (schema.notNull && isNullOrUndefined(record[schema.key]))
         return Promise.reject(
@@ -139,7 +177,7 @@ export default function Schemas<T>(
 
       if (
         hasValue(record[schema.key]) &&
-        !isValidType(schema, record[schema.key])
+        !isValidType(schema as any, record[schema.key])
       ) {
         return Promise.reject(
           new SchemaError(
@@ -169,7 +207,7 @@ export default function Schemas<T>(
     if (!schemaKeys.length) return data;
     let out: Partial<StoreRecord<T>> = {};
     for (const key of schemaKeys) {
-      const schema = schemas.find(x => x.key === key);
+      const schema = schemas![key];
       if (schema && isNullOrUndefined(data[schema.key])) {
         out[schema.key] = defaultValue(schema);
       }

@@ -1,27 +1,30 @@
-const { default: createStore } = require("../dist");
-const { MemDb } = require("./util/level");
+const { default: createStore } = require('../dist');
+const encoding = require('encoding-down');
+const levelup = require('levelup');
+const MemDown = require('memdown');
 
-const assert = require("assert");
+const MemDb = () => levelup(encoding(new MemDown(), { valueEncoding: 'json' }));
+
+const assert = require('assert');
 
 function randomString() {
-  return require("crypto")
+  return require('crypto')
     .randomBytes(16)
-    .toString("hex");
+    .toString('hex');
 }
 
 async function run() {
   const loopCount = 10000;
+  const store = createStore(MemDb(), randomString());
   {
-    const store = createStore(MemDb(), randomString());
     await (() => {
-      console.time("add:1");
+      console.time('add:1');
       return store
-        .add({ _id_: "1", name: "1" }) //
-        .then(console.timeEnd("add:1"));
+        .add({ _id_: '1', name: '1' }) //
+        .then(console.timeEnd('add:1'));
     })();
   }
   {
-    const store = createStore(MemDb(), randomString());
     console.time(`add:x${loopCount}`);
     for (let i = 0; i < loopCount; i++) {
       await store.add({ _id_: `indexed${i}`, name: `x${i}` });
@@ -39,7 +42,7 @@ async function run() {
     {
       console.time(`findMany:${loopCount}`);
       const x = await store.findMany();
-      assert.equal(x.length, loopCount);
+      assert.equal(x.length, loopCount + 1);
       console.timeEnd(`findMany:${loopCount}`);
     }
   }

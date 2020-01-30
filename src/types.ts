@@ -24,6 +24,8 @@ export type Schema<T> = {
    */
   type?: ValueType | ValueType[];
 };
+export type Schemap<T> = { [key in keyof T]: Schema<T> };
+
 export type ID<T> = T[keyof T] & string;
 export type Exists<T> = (
   idOrQuery: ID<T> | Query<StoreRecord<T>>,

@@ -15,6 +15,7 @@
     "build": "rimraf dist && tsc -p .",
     "prepublish": "yarn build && yarn test && yarn pretty",
     "bench": "cross-env NODE_ENV=production 0x -o test/bench.js",
+    "bench:light": "NODE_ENV=prodution && node test/bench.console.js >> bench.console.log",
     "coverage": "jest --ci --collect-coverage --runInBand --no-cache "
   },
   "dependencies": {

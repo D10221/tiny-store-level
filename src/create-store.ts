@@ -12,7 +12,7 @@ import {
   Add,
   FindOne,
   Exists,
-  ID,
+  Schemap,
 } from "./types";
 import { toPromise, concat, count, PromiseReducer } from "./streams";
 
@@ -30,12 +30,12 @@ function isNotFoundError(error: Error): error is Error {
 export default function createStore<T extends { [key: string]: any } = {}>(
   db: LevelUp,
   partitionName: string,
-  schemas: Schema<T>[] = [],
+  schemas?: Schemap<StoreRecord<T>> | Schema<StoreRecord<T>>[],
 ) {
   const { encodeKey, decodeKey, scopedStream } = keyEncoder(partitionName);
   const { primaryKey, applyDefaultValues, validate } = schema(
-    schemas,
     partitionName,
+    schemas,
   );
   const exists: Exists<T> = async queryOrId => {
     if (typeof queryOrId === "string") {
