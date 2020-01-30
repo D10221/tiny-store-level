@@ -2,7 +2,30 @@ import jsonquery, { Query } from "jsonquery";
 import { LevelUp } from "levelup";
 import sublevelDown from "subleveldown";
 import { Add, Delete, Exists, FindMany, FindOne, StoreRecord, Update, Schema, Schemap } from "./types";
-export type PromiseReducer<T, R> = (result: R, data: T) => Promise<R>;
+
+// import { Transform } from "stream";
+// type TransformFunction<X extends any = any> = (
+//     this: Transform,
+//     chunk: X,
+//     encoding: string,
+//     callback: (error?: Error | null, data?: any) => void,
+// ) => void;
+
+// const makeTransform = (transform: TransformFunction) =>
+//     new Transform({
+//         objectMode: true,
+//         transform,
+//     });
+/**
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charCodeAt
+ * 0xDBFF = higher bound
+ */
+const ID_MAX_VALUE = String.fromCharCode(0xdbff).repeat(64);
+/** forcing alphanumeric will enable easier gt & lt and reserved keys like $index? */
+function isValidID(x: any): x is string {
+    return typeof x === "string" && /^[a-zA-Z0-9]+$/.test(x) && x < ID_MAX_VALUE;
+}
+type PromiseReducer<T, R> = (result: R, data: T) => Promise<R>;
 
 function concat<T>(
     condition: (x: T) => boolean,
@@ -107,13 +130,13 @@ const fromList = <T>(input: Schema<StoreRecord<T>>[]) => {
 
 const filter = memoize(<X>(xxx: X[]) => Array.prototype.filter.bind(xxx));
 
-const nextStore = <T>(_db: LevelUp, name: string, schemapOrList?: Schemap<StoreRecord<T>> | Schema<StoreRecord<T>>[]) => {
+const nextStore = <T>(_db: LevelUp, patitionName: string, schemapOrList?: Schemap<StoreRecord<T>> | Schema<StoreRecord<T>>[]) => {
 
     const { schemas, schemaList, schemaKeys } = Array.isArray(schemapOrList)
         ? fromList(schemapOrList)
         : fromMap(schemapOrList);
 
-    const sublevel = sublevelDown(_db, name, { valueEncoding: 'json' });
+    const sublevel = sublevelDown(_db, patitionName, { valueEncoding: 'json' });
     const primaryKeys = filter(schemaList)(isKey);
     const primaryKey: Schema<StoreRecord<T>> = primaryKeys[0];
 
@@ -150,9 +173,8 @@ const nextStore = <T>(_db: LevelUp, name: string, schemapOrList?: Schemap<StoreR
             if (!data) throw new Error("StoreRecord required");
             const id = data[primaryKey.key];
 
-            if (!id) throw Error(`Missing ${primaryKey.key}`);
-
-            //if (!force && (await exists(id)))throw KeyError.idExists(primaryKey.key, id);
+            if (!isValidID(id)) throw Error(`Missing ${primaryKey.key}`);
+            if (!force && (await exists(id))) throw new Error(`${primaryKey.key}=${id} exists!`);
 
             //const value = await validate(applyDefaults(data), findMany);
             const ret = await sublevel.put(id, {
@@ -164,11 +186,12 @@ const nextStore = <T>(_db: LevelUp, name: string, schemapOrList?: Schemap<StoreR
             return Promise.reject(error);
         }
     };
+
     const update: Update<T> = async (data: Partial<StoreRecord<T>>) => {
         try {
             if (!data) throw new Error("@param data required");
             const id = data[primaryKey.key];
-            if (!id) throw new Error(`Missing ${primaryKey.key}`);
+            if (!isValidID(id)) throw new Error(`Missing ${primaryKey.key}`);
             const prev = await findOne(id); // throws not found
             // const value = await validate({ ...prev, ...data, [primaryKey.key]: id }, findMany); // throws
             const ret = await sublevel.put(id, { ...prev, ...data, [primaryKey.key]: id }); //key exception inscope
@@ -178,7 +201,11 @@ const nextStore = <T>(_db: LevelUp, name: string, schemapOrList?: Schemap<StoreR
         }
     };
     const findMany: FindMany<T> = (query?: Query<StoreRecord<T>>) => {
-        const stream = sublevel.createReadStream();
+        const stream = sublevel
+            .createReadStream({
+                values: true, keys: false
+            });
+
         const reduce = concat<StoreRecord<T>>(Boolean);
         const _toPromise = toPromise(reduce, []);
         if (query) {
