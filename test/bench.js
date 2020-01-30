@@ -12,10 +12,10 @@ function randomString() {
 }
 async function run() {
   const store = createStore(MemDb(), randomString());
-  await store.add({ _id_: "1", name: "1" });
+  await store.add({ id: "1", name: "1" });
   const loopCount = 10000;
   for (let i = 0; i < loopCount; i++) {
-    await store.add({ _id_: `indexed${i}`, name: `x${i}` });
+    await store.add({ id: `indexed${i}`, name: `x${i}` });
   }
   const one = 9999;
   await store.findOne(`indexed${one}`);

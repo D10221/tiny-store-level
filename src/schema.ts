@@ -1,12 +1,16 @@
-import { Schema, StoreRecord, Schemap } from "./types";
+import { Schema, StoreRecord, Schemap, SchemaValueType } from "./types";
 import { arrify, isFunction, memoize, isNullOrUndefined, hasValue } from "./util";
 export class SchemaError extends Error {
   constructor(message: string) {
     super(message);
   }
 }
+
+const schemaValueTypes: SchemaValueType[] = ["array", "boolean", "date", "number", "object", "string"];
+
 function isValidType(schema: Schema<any>, value: any) {
-  function check(type: any) {
+  function check(type: SchemaValueType | SchemaValueType[] | undefined) {
+    if (!schema.type) return true;
     switch (type) {
       case "number":
         return schema.type === typeof value;
@@ -33,7 +37,7 @@ function defaultValue(schema: Schema<any>) {
   return isFunction(schema.default) ? schema.default() : schema.default;
 }
 const DEFAULT_SCHEMA: Schema<StoreRecord<any>> = {
-  key: "_id_",
+  key: "id",
   primaryKey: true,
   notNull: true,
   type: "string",
@@ -145,8 +149,14 @@ export default function Schemas<T>(
   const isSchema = memoize((key: string) =>
     Boolean(schemaKeys.find(x => x === key)),
   );
+  // 
+  for (const xTypes of schemaList.filter(x => Boolean(x.type)).map(x => x.type).map(arrify)) {
+    if (xTypes.find(x => x && schemaValueTypes.indexOf(x) === -1)) {
+      throw new Error(`Invalid schema type:[${xTypes.join(" ,")}]`);
+    }
+  }
   /**
-   *  Dont validate _id_
+   *  validate record
    */
   const validate = async (
     record: StoreRecord<T>, // Record
@@ -159,13 +169,15 @@ export default function Schemas<T>(
         const schema = schemas[schemaKey];
         if (schema.notNull && isNullOrUndefined(record[schema.key]))
           throw new SchemaError(`${schemaName}: '${schema.key}' cannot be null`)
-        if (hasValue(record[schema.key]) && !isValidType(schema, record[schema.key])) {
-          throw new SchemaError(
-            `${schemaName}: '${schema.key}' expected Type '${arrify(
-              schema.type,
-            ).join("|")} ' got '${typeof record[schema.key]} '`,
-          )
-        }
+        if (schema.type)
+          if (hasValue(record[schema.key])) {
+            if (!isValidType(schema, record[schema.key]))
+              throw new SchemaError(
+                `${schemaName}: '${schema.key}' expected Type '${arrify(
+                  schema.type,
+                ).join("|")} ' got '${typeof record[schema.key]} '`,
+              )
+          }
         // ...
         if (schema.unique) {
           const records = await findMany();

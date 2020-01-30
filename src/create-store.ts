@@ -143,7 +143,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
       });
     }
     if (typeof idOrquery === "string") {
-      // its an _id_
+      // its an id
       if (!(await exists(idOrquery))) {
         return Promise.reject(KeyError.idNotFound(idOrquery));
       }

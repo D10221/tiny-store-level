@@ -1,7 +1,7 @@
 import keyEncoder from "../src/keys";
 import randomString from "./util/random-string";
 import { MemDb } from "./util/level";
-import { toPromise, concat } from "../src/streams";
+import { toPromise, concat } from "../src/util";
 
 const db = MemDb();
 

@@ -15,13 +15,13 @@ describe("Tiny Store Level", () => {
     const db = await MemDb();
     const stuff = await createStore(db, "stuff");
     const id = randomString();
-    await stuff.add({ _id_: id, hello: "world" });
+    await stuff.add({ id: id, hello: "world" });
     const x = await stuff.findOne(id);
-    expect(x).toEqual({ hello: "world", _id_: id });
+    expect(x).toEqual({ hello: "world", id: id });
     const many = await stuff.findMany();
     expect(
-      many.find(x => x._id_ === id), // filter, find ...etc
-    ).toEqual({ hello: "world", _id_: id });
+      many.find(x => x.id === id), // filter, find ...etc
+    ).toEqual({ hello: "world", id: id });
     await db.close(); // 13ms
   });
 });

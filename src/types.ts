@@ -1,32 +1,24 @@
 import { Query } from "jsonquery";
-
-export type StoreRecord<T> = T & { _id_?: string | undefined } & {
-    [key in keyof T]: T[key];
-  };
-
-export type ValueType =
+export type SchemaValueType =
   | "string"
   | "number"
   | "boolean"
   | "object"
   | "array"
   | "date";
-
 export type Schema<T> = {
   primaryKey?: boolean;
   key: keyof T & string;
   notNull?: boolean | undefined;
   unique?: boolean | undefined;
-  default?: any | undefined;
-  /**
-   * whatever returns typeof
-   * replace with valid(x)=> boolean?
-   */
-  type?: ValueType | ValueType[];
+  default?: any | undefined;  
+  type?: SchemaValueType | SchemaValueType[];
 };
 export type Schemap<T> = { [key in keyof T]: Schema<T> };
-
 export type ID<T> = T[keyof T] & string;
+export type StoreRecord<T> = T & { id?: string | undefined } & {
+  [key in keyof T]: T[key];
+};
 export type Exists<T> = (
   idOrQuery: ID<T> | Query<StoreRecord<T>>,
 ) => Promise<boolean>;
@@ -41,7 +33,6 @@ export type FindMany<T> = (
 export type Delete<T> = (
   idOrQuery: "*" | ID<T> | Query<StoreRecord<T>>,
 ) => Promise<number>;
-
 export interface Store<T> {
   exists: Exists<T>;
   add: Add<T>;

@@ -20,14 +20,14 @@ async function run() {
     await (() => {
       console.time("add:1");
       return store
-        .add({ _id_: "1", name: "1" }) //
+        .add({ id: "1", name: "1" }) //
         .then(console.timeEnd("add:1"));
     })();
   }
   {
     console.time(`add:x${loopCount}`);
     for (let i = 0; i < loopCount; i++) {
-      await store.add({ _id_: `indexed${i}`, name: `x${i}` });
+      await store.add({ id: `indexed${i}`, name: `x${i}` });
     }
     console.timeEnd(`add:x${loopCount}`);
     {
