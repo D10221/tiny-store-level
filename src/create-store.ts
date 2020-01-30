@@ -1,6 +1,5 @@
 import jsonquery, { Query } from "jsonquery";
 import { LevelUp } from "levelup";
-import { Transform } from "stream";
 import keyEncoder, { isValidID, KeyError } from "./keys";
 import schema from "./schema";
 import {
@@ -14,13 +13,8 @@ import {
   Exists,
   Schemap,
 } from "./types";
-import { toPromise, concat, count } from "./streams";
+import { TransformFunction, NotImplementedError, makeTransform, concat, toPromise, count } from "./util";
 
-class NotImplementedError extends Error {
-  constructor(what: string) {
-    super(`"${what}" Not Implemented`);
-  }
-}
 function isNotFoundError(error: Error): error is Error {
   return error instanceof Error && error.name === "NotFoundError";
 }
@@ -32,11 +26,20 @@ export default function createStore<T extends { [key: string]: any } = {}>(
   partitionName: string,
   schemas?: Schemap<StoreRecord<T>> | Schema<StoreRecord<T>>[],
 ) {
-  const { encodeKey, decodeKey, scopedStream } = keyEncoder(partitionName);
-  const { primaryKey, applyDefaultValues, validate } = schema(
-    partitionName,
-    schemas,
-  );
+  const { decodeKey, encodeKey, scopedStream } = keyEncoder(partitionName); 
+  const { primaryKey, validate, applyDefaults } = schema(partitionName, schemas);
+  const decodeKeyValue: TransformFunction<{
+    key: string;
+    value: any;
+  }> = function (data, _encoding, callback) {
+    try {
+      const { key, value } = data;
+      this.push({ ...value, [primaryKey.key]: decodeKey(key) });
+      callback();
+    } catch (error) {
+      callback(error);
+    }
+  };
   const exists: Exists<T> = async queryOrId => {
     if (typeof queryOrId === "string") {
       try {
@@ -76,54 +79,33 @@ export default function createStore<T extends { [key: string]: any } = {}>(
       if (!force && (await exists(id)))
         throw KeyError.idExists(primaryKey.key, id);
 
-      const value = applyDefaultValues(data);
-      await validate(value, findMany);
-      const encoded = encodeKey(id);
-      const ret = await db.put(encoded, { ...value, [primaryKey.key]: id });
+      const value = await validate(
+        applyDefaults(data),
+        findMany,
+      );
+      const ret = await db.put(encodeKey(id), {
+        ...value,
+        [primaryKey.key]: id,
+      });
       return ret;
     } catch (error) {
       return Promise.reject(error);
     }
   };
-
   const update: Update<T> = async (data: Partial<StoreRecord<T>>) => {
     try {
       if (!data) throw new Error("@param data required");
-
       const id = data[primaryKey.key];
       if (!isValidID(id)) throw KeyError.invalidOrMissigID(primaryKey.key, id);
-
-      const prev = await findOne(id as any); // throw not found
-
-      await validate({ ...data, [primaryKey.key]: id }, findMany); // throws
-
-      const ret = await db.put(encodeKey(id), { ...prev, ...data }); //key exception inscope
+      const prev = await findOne(id); // throws not found
+      const value = await validate(
+        { ...prev, ...data, [primaryKey.key]: id },
+        findMany,
+      ); // throws
+      const ret = await db.put(encodeKey(id), value); //key exception inscope
       return ret;
     } catch (error) {
       return Promise.reject(error);
-    }
-  };
-  type TransformFunction<X extends any = any> = (
-    this: Transform,
-    chunk: X,
-    encoding: string,
-    callback: (error?: Error | null, data?: any) => void,
-  ) => void;
-  const makeTransform = (transform: TransformFunction) =>
-    new Transform({
-      objectMode: true,
-      transform,
-    });
-  const decodeKeyValue: TransformFunction<{
-    key: string;
-    value: any;
-  }> = function(data, _encoding, callback) {
-    try {
-      const { key, value } = data;
-      this.push({ ...value, [primaryKey.key]: decodeKey(key) });
-      callback();
-    } catch (error) {
-      callback(error);
     }
   };
   const findMany: FindMany<T> = (query?: Query<StoreRecord<T>>) => {
@@ -137,8 +119,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
       return _toPromise(stream);
     }
   };
-
-  const $delete: Delete<T> = async idOrquery => {
+  const remove: Delete<T> = async idOrquery => {
     if (typeof idOrquery === "string" && idOrquery === "*") {
       // delete all keys
       const stream = scopedStream(db);
@@ -194,7 +175,7 @@ export default function createStore<T extends { [key: string]: any } = {}>(
     update,
     findMany,
     findOne,
-    delete: $delete,
+    remove,
   };
   return store;
 }

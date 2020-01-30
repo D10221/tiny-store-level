@@ -1,4 +1,4 @@
-import { isValidID, isValidPartitionName, KEY_MAX_VALUE } from "../src/keys";
+import { isValidID, isValidPartitionName, ID_MAX_VALUE } from "../src/keys";
 
 function expectValidID(expected: boolean, value: string) {
   if (isValidID(value) !== expected) {
@@ -65,23 +65,23 @@ describe("isValidID", () => {
   });
   it("maxPrimaryKeyValue", () => {
     expect(
-      KEY_MAX_VALUE >
+      ID_MAX_VALUE >
         "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ_",
     ).toBe(true);
     expect(
-      KEY_MAX_VALUE >
+      ID_MAX_VALUE >
         "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ9",
     ).toBe(true);
     expect(
-      KEY_MAX_VALUE >
+      ID_MAX_VALUE >
         "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ0",
     ).toBe(true);
     expect(
-      KEY_MAX_VALUE >
+      ID_MAX_VALUE >
         "_ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
     ).toBe(true);
     expect(
-      KEY_MAX_VALUE >
+      ID_MAX_VALUE >
         "9ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
     ).toBe(true);
   });

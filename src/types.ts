@@ -48,5 +48,5 @@ export interface Store<T> {
   update: Update<T>;
   findOne: FindOne<T>;
   findMany: FindMany<T>;
-  delete: Delete<T>;
+  remove: Delete<T>;
 }

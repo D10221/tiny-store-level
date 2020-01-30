@@ -20,7 +20,7 @@ describe("Level Store", () => {
     const id = randomString();
     const aName = randomString();
     await store.add({ _id_: id, name: aName });
-    await store.delete(id);
+    await store.remove(id);
     const found = await store.findOne(id).catch(e => e);
     expect(found).toBeInstanceOf(Error);
     expect((found as Error).name === "NotFoundError").toBe(true);
@@ -82,13 +82,13 @@ describe("Level Store", () => {
       randomString(),
       [{ key: "id", primaryKey: true }],
     );
-    expect(await store.delete("*")).toBe(0);
+    expect(await store.remove("*")).toBe(0);
     expect(await store.add({ id: "a", xname: "aaa" })).toBe(undefined);
     expect(await store.findMany()).toMatchObject([{ id: "a", xname: "aaa" }]);
-    expect(await store.delete("*")).toBe(1);
+    expect(await store.remove("*")).toBe(1);
     expect(await store.add({ id: "a", xname: "aaa" })).toBe(undefined);
     expect(await store.findOne("a")).toMatchObject({ xname: "aaa", id: "a" });
-    expect(await store.delete("a")).toBe(1);
+    expect(await store.remove("a")).toBe(1);
     expect(await store.findOne("a").catch(e => e.name)).toBe("NotFoundError");
   });
 });
