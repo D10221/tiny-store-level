@@ -45,16 +45,14 @@ const DEFAULT_SCHEMA: Schema<StoreRecord<any>> = {
   notNull: true,
   type: "string",
 };
-const keys = memoize(Object.keys);
 const isKey = (x: Schema<StoreRecord<any>>) => Boolean(x.primaryKey);
-const not = <X>(f: (x: X) => boolean) => memoize((args: X) => !f(args));
-const filter = memoize(<X>(xxx: X[]) => Array.prototype.filter.bind(xxx));
+const not = <X>(f: (x: X) => boolean) => (args: X) => !f(args);
 
 const fromMap = <T>(schemas?: Schemap<StoreRecord<T>>) => {
   schemas =
     schemas ||
     ({ [DEFAULT_SCHEMA.key]: DEFAULT_SCHEMA } as Schemap<StoreRecord<T>>);
-  const schemaKeys: (keyof StoreRecord<T>)[] = keys(schemas) as any;
+  const schemaKeys: (keyof StoreRecord<T>)[] = Object.keys(schemas) as any;
   const schemaList = schemaKeys.map(k => schemas![k]);
   // default schema
   if (schemaList.filter(isKey).length < 1) {
@@ -107,7 +105,7 @@ export default function Schemas<T>(
   if (dups && dups.length) {
     throw new SchemaError("Dup keys " + dups.map(x => x.key).join(", "));
   }
-  const keysNotInSchema = (o: {}) => filter(keys(o))(not(isSchema));
+  const keysNotInSchema = (o: {}) => Object.keys(o).filter(not(isSchema));
 
   const rejectNotInSchema = (record: Partial<StoreRecord<T>>) => {
     if (keysNotInSchema(record).length > 0) {
@@ -115,11 +113,11 @@ export default function Schemas<T>(
         `[${keysNotInSchema(record)
           .map(x => `"${x}"`)
           .join(", ")}] Not in Schema: ` +
-          ` ${schemaKeys.map(x => `"${x}"`).join(", ")} `,
+        ` ${schemaKeys.map(x => `"${x}"`).join(", ")} `,
       );
     }
   };
-  const primaryKeys = filter(schemaList)(isKey);
+  const primaryKeys = schemaList.filter(isKey);
   if (primaryKeys.length < 1) {
     throw new SchemaError("Missing primary key");
   }

@@ -1,4 +1,3 @@
-import { Transform } from "stream";
 export const isNullOrUndefined = (x: any): boolean =>
   x === null || x === undefined;
 export const hasValue = (x: any) => !isNullOrUndefined(x);
@@ -6,17 +5,6 @@ export const isFunction = (x: any) => typeof x === "function";
 export const arrify = <T>(x: T | T[]): T[] => {
   return isNullOrUndefined(x) ? [] : Array.isArray(x) ? x : [x];
 };
-export type TransformFunction<X extends any = any> = (
-  this: Transform,
-  chunk: X,
-  encoding: string,
-  callback: (error?: Error | null, data?: any) => void,
-) => void;
-export const makeTransform = (transform: TransformFunction) =>
-  new Transform({
-    objectMode: true,
-    transform,
-  });
 export const memoize = <P, R>(f: (arg: P) => R) => {
   let cache: any[] = [undefined, undefined];
   return (arg: P): R => {
@@ -25,50 +13,24 @@ export const memoize = <P, R>(f: (arg: P) => R) => {
     return cache[1];
   };
 };
-export class NotImplementedError extends Error {
-  constructor(what: string) {
-    super(`"${what}" Not Implemented`);
-  }
+export function isNotFoundError(error: Error): error is Error {
+  return error instanceof Error && error.name === "NotFoundError";
 }
-
-export type PromiseReducer<T, R> = (result: R, data: T) => Promise<R>;
-
-export function concat<T>(
-  condition: (x: T) => boolean,
-): PromiseReducer<T, T[]> {
-  return (result, data) => {
-    return Promise.resolve(condition(data) ? [...result, data] : result);
-  };
-}
-export function count<T>(
-  action: (x: T) => void | Promise<void>,
-): PromiseReducer<T, number> {
-  return async (result, data) => {
-    await action(data);
-    return result + 1;
-  };
-}
-export const toPromise = <Data, Result>(
-  reduce: PromiseReducer<Data, Result>,
-  acc: Result,
-) => (stream: NodeJS.ReadableStream) =>
-  new Promise<Result>((resolve, reject) => {
+export const toPromise = <X>(stream: NodeJS.ReadableStream) =>
+  new Promise<X[]>((resolve, reject) => {
     try {
-      let result = acc;
-      stream.on("data", async data => {
-        result = await reduce(result, data);
+      let result: X[] = []
+      stream.on("data", chunk => {
+        result.push(chunk)
       });
       stream.on("error", error => {
         reject(error);
       });
-      // stream.on("close", () => {});
       stream.on("end", () => {
         resolve(result);
+        stream.readable = false;
       });
     } catch (error) {
       reject(error);
     }
   });
-export function isNotFoundError(error: Error): error is Error {
-  return error instanceof Error && error.name === "NotFoundError";
-}

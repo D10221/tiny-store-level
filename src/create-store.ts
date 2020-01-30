@@ -12,7 +12,7 @@ import {
   Schema,
   Schemap,
 } from "./types";
-import { concat, count, toPromise, isNotFoundError } from "./util";
+import { isNotFoundError, toPromise } from "./util";
 import schema from "./schema";
 import { isValidID, KeyError } from "./keys";
 
@@ -31,6 +31,13 @@ const nextStore = <T>(
 
   const sublevel = sublevelDown(_db, patitionName, { valueEncoding: "json" });
 
+  const valueStream = () => sublevel.createReadStream({
+    values: true,
+    keys: false,
+  });
+
+  const keyStream = () => sublevel.createReadStream({ values: false });
+
   const exists: Exists<StoreRecord<T>> = async queryOrId => {
     if (typeof queryOrId === "string") {
       try {
@@ -41,8 +48,13 @@ const nextStore = <T>(
         throw error;
       }
     }
-    throw new NotImplementedError("exists(query)");
+    return toPromise(sublevel.createReadStream({
+      values: true,
+      keys: false,
+      limit: 1
+    }).pipe(jsonquery(queryOrId))).then(x => Boolean(x.length));
   };
+
   const findOne: FindOne<T> = async (queryOrId): Promise<T> => {
     if (typeof queryOrId === "string") {
       try {
@@ -52,12 +64,12 @@ const nextStore = <T>(
         return Promise.reject(error);
       }
     }
-    throw new NotImplementedError("FindOne(query)");
+    return toPromise<StoreRecord<T>>(valueStream().pipe(jsonquery(queryOrId))).then(values => values[0]);
   };
   /**
    *
    * @param data
-   * @param {boolean} force force update 'ignore if exist'
+   * @param {boolean} force force update 'ignore if exist', as in Upsert
    */
   const add: Add<T> = async (data: StoreRecord<T>, force: boolean = false) => {
     try {
@@ -95,42 +107,21 @@ const nextStore = <T>(
       return Promise.reject(error);
     }
   };
-  const findMany: FindMany<T> = (query?: Query<StoreRecord<T>>) => {
-    const stream = sublevel.createReadStream({
-      values: true,
-      keys: false,
-    });
 
-    const reduce = concat<StoreRecord<T>>(Boolean);
-    const _toPromise = toPromise(reduce, []);
+  const findMany: FindMany<T> = (query?: Query<StoreRecord<T>>) => {
     if (query) {
-      return _toPromise(stream.pipe(jsonquery(query)));
+      return toPromise(valueStream().pipe(jsonquery(query)));
     } else {
-      return _toPromise(stream);
+      return toPromise(valueStream());
     }
   };
+
   const remove: Delete<T> = async idOrquery => {
     if (typeof idOrquery === "string" && idOrquery === "*") {
-      // delete all keys
-      const stream = sublevel.createReadStream();
-      return new Promise<number>((resolve, reject) => {
-        try {
-          let result = 0;
-          stream.on("data", async ({ key }) => {
-            await sublevel.del(key);
-            result = result + 1;
-          });
-          stream.on("error", error => {
-            reject(error);
-          });
-          // stream.on("close", () => {});
-          stream.on("end", () => {
-            resolve(result);
-          });
-        } catch (error) {
-          reject(error);
-        }
-      });
+      // delete all keys 
+      const keys = await toPromise<string>(keyStream());
+      await sublevel.clear(); //is it faster to use del?
+      return keys.length;
     }
     if (typeof idOrquery === "string") {
       // its an id
@@ -144,14 +135,12 @@ const nextStore = <T>(
     }
     if (typeof idOrquery === "object") {
       // delete some criteria based
-      return toPromise(
-        count<StoreRecord<T>>(async data => {
-          await sublevel.del(data[primaryKey.key]);
-        }),
-        0,
-      )(sublevel.createReadStream().pipe(jsonquery(idOrquery)));
+      const keys = await toPromise<string>(keyStream());
+      return Promise.all(
+        keys.map(key => sublevel.del(key))
+      ).then(() => keys.length);
     }
-    return Promise.reject(new Error("Not Implemented"));
+    return Promise.reject(new NotImplementedError("Not Implemented"));
   };
   const store = {
     exists,
@@ -160,6 +149,7 @@ const nextStore = <T>(
     findMany,
     findOne,
     remove,
+    sublevel
   };
   return store;
 };

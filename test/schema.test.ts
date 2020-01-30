@@ -127,9 +127,7 @@ describe("Schema", () => {
     const id = randomString();
     await store.add({ id, name: null as any });
     const found = await store.findOne(id);
-
     expect(found.name).toBe(newName);
-
     expect(toDate(found.createdAt).getDate()).toBe(new Date().getDate());
   });
 
