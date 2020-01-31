@@ -8,22 +8,21 @@ import {
   FindOne,
   StoreRecord,
   Update,
-  Schema,
-  Schemap,
 } from "./types";
-import { isNotFoundError, toPromise, NotImplementedError } from "./util";
-import schema from "./schema";
-import { isValidID, KeyError } from "./keys";
+import {
+  isNotFoundError,
+  toPromise,
+  NotImplementedError,
+  KeyError,
+  isValidID
+} from "./internal";
 /**
  *
  * @param level sublevel
  * @param schemapOrList
  */
-const createStore = <T>(
-  level: LevelUp,
-  schemapOrList?: Schemap<StoreRecord<T>> | Schema<StoreRecord<T>>[],
-) => {
-  const { primaryKey, validate } = schema<T>(schemapOrList);
+const createStore = <T>(level: LevelUp, primaryKey: keyof StoreRecord<T>) => {
+  //const { primaryKey, validate } = schema<T>(schemapOrList);
   /**
    *
    * @param args id or jsonquery
@@ -82,19 +81,15 @@ const createStore = <T>(
    * @param data
    * @param {boolean} force force update 'ignore if exist', as in Upsert
    */
-  const add: Add<T> = async (data: StoreRecord<T>, force: boolean = false) => {
+  const add: Add<T> = async (data: StoreRecord<T>) => {
     try {
       if (!data) throw new Error("StoreRecord required");
-      const id = data[primaryKey.key];
-
-      if (!isValidID(id)) KeyError.invalidOrMissigID(primaryKey.key, id);
-      if (!force && (await exists(id)))
-        throw KeyError.idNotFound(primaryKey.key, id);
-
-      // const value = await validate(applyDefaults(data), findMany);
+      const id = data[primaryKey];
+      if (!isValidID(id)) throw KeyError.invalidOrMissigID(primaryKey, id);
+      if (await exists(id)) throw KeyError.idNotFound(primaryKey, id);
       const ret = await level.put(id, {
         ...data,
-        [primaryKey.key]: id,
+        [primaryKey]: id,
       });
       return ret;
     } catch (error) {
@@ -104,14 +99,14 @@ const createStore = <T>(
   const update: Update<T> = async (data: Partial<StoreRecord<T>>) => {
     try {
       if (!data) throw new Error("@param data required");
-      const id = data[primaryKey.key];
-      if (!isValidID(id)) throw KeyError.invalidOrMissigID(primaryKey.key, id);
+      const id = data[primaryKey];
+      if (!isValidID(id)) throw KeyError.invalidOrMissigID(primaryKey, id);
       const prev = await findOne(id); // throws not found
-      // const value = await validate({ ...prev, ...data, [primaryKey.key]: id }, findMany); // throws
+      // const value = await validate({ ...prev, ...data, [primaryKey]: id }, findMany); // throws
       const ret = await level.put(id, {
         ...prev,
         ...data,
-        [primaryKey.key]: id,
+        [primaryKey]: id,
       }); //key exception inscope
       return ret;
     } catch (error) {
@@ -139,7 +134,7 @@ const createStore = <T>(
     if (typeof args === "string") {
       // its an id
       if (!(await exists(args))) {
-        return Promise.reject(KeyError.idNotFound(primaryKey.key, args));
+        return Promise.reject(KeyError.idNotFound(primaryKey, args));
       }
       await level.del(args);
       return Promise.resolve(1);
@@ -150,7 +145,7 @@ const createStore = <T>(
         // needs values to process querie
         level.createValueStream().pipe(jsonquery(args)),
       );
-      return Promise.all(values.map(x => level.del(x[primaryKey.key]))).then(
+      return Promise.all(values.map(x => level.del(x[primaryKey]))).then(
         () => values.length,
       );
     }

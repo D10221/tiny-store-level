@@ -1,11 +1,7 @@
-/**
- * @type {import("../").CreateStore}
- */
-const { default: createStore } = require("../");
+const createStore = require("../").default;
 const levelup = require("levelup");
 const MemDown = require("memdown");
-
-export const MemDb = () => levelup(new MemDown());
+const subleveldown = require("subleveldown");
 
 function randomString() {
   return require("crypto")
@@ -15,13 +11,16 @@ function randomString() {
 
 describe("Tiny Store Level", () => {
   it("works", async () => {
-    const db = await MemDb();
-    const stuff = await createStore(db, randomString());
+    const db = await levelup(new MemDown());
+    const store = await createStore(
+      subleveldown(db, randomString(), { valueEncoding: "json" }),
+      "id"
+    );
     const id = randomString();
-    await stuff.add({ id: id, hello: "world" });
-    const x = await stuff.findOne(id);
+    await store.add({ id, hello: "world" });
+    const x = await store.findOne(id);
     expect(x).toEqual({ hello: "world", id: id });
-    const many = await stuff.findMany();
+    const many = await store.findMany();
     expect(
       many.find(x => x.id === id), // filter, find ...etc
     ).toEqual({ hello: "world", id: id });

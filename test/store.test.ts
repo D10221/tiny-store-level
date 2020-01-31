@@ -1,5 +1,5 @@
 import createStore from "../src";
-import { KeyError } from "../src/keys";
+import { KeyError } from "../src/internal";
 import randomString from "./util/random-string";
 import subleveldown from "subleveldown";
 import db from "./util/db";
@@ -7,18 +7,22 @@ import db from "./util/db";
 const level = (name: string) =>
   subleveldown(db, name, { valueEncoding: "json" });
 
+type WithID<T> = T & { id: string };
+
 describe("Level Store", () => {
   // ...
   it("finds nothing", async () => {
-    const things = createStore(level("things"));
-    const x = await things.findMany();
+    const store = createStore<WithID<{}>>(level(randomString()), "id");
+
+    const x = await store.findMany();
     expect(x).toMatchObject([]);
   });
 
   it("is not found error", async () => {
-    const store = createStore<{ name: string }>(level("things13"), [
-      { key: "name", notNull: true, unique: true, type: "string" },
-    ]);
+    const store = createStore<WithID<{ name: string }>>(
+      level(randomString()),
+      "id",
+    );
     const id = randomString();
     const aName = randomString();
     await store.add({ id, name: aName });
@@ -29,7 +33,7 @@ describe("Level Store", () => {
   });
 
   it("IDS: rejects duplicated id", async () => {
-    const store = createStore<{}>(level("things3"));
+    const store = createStore<WithID<{}>>(level(randomString()), "id");
     const id = randomString();
     await store.add({ id });
     const x = await store.add({ id }).catch(e => e);
@@ -37,21 +41,24 @@ describe("Level Store", () => {
   });
 
   it("IDS: rejects bad id", async () => {
-    const store = createStore<{}>(level("things3"));
-    expect(await store.add({ id: "_%$#@" }).catch(x => x)).toBeInstanceOf(
-      KeyError,
-    );
+    const store = createStore<WithID<{}>>(level(randomString()), "id");
+    const e = await store.add({ id: "_%$#@" }).catch(x => x);
+    expect(e).toBeInstanceOf(KeyError);
   });
 
   it("IDS: throws not found", async () => {
-    const things = createStore<{ name: string }>(level("things"));
-    const x = await things.findOne("a").catch(error => error);
+    const store = createStore<WithID<{ name: string }>>(
+      level(randomString()),
+      "id",
+    );
+    const x = await store.findOne("a").catch(error => error);
     expect(x.name).toBe("NotFoundError");
   });
 
   it("Updates: keeps other values", async () => {
-    const store = createStore<{ name: string; xyz: string }>(
-      level("things125"),
+    const store = createStore<WithID<{ name: string; xyz: string }>>(
+      level(randomString()),
+      "id",
     );
     {
       const id = randomString();
@@ -70,7 +77,10 @@ describe("Level Store", () => {
     }
   });
   it("Updates: rejects invalid Or missig key", async () => {
-    const store = createStore(level("xxx-" + randomString()));
+    const store = createStore<{ id: string }>(
+      level("xxx-" + randomString()),
+      "id",
+    );
     await store.add({ id: "1" });
     const ret = await store
       .update({
@@ -81,15 +91,15 @@ describe("Level Store", () => {
     expect(ret.message).toBe(KeyError.invalidOrMissigID("id").message);
   });
   it("Works alt id", async () => {
-    const store = createStore<{ xname: string; id: string }>(
+    const store = createStore<{ xname: string; xid: string }>(
       level(randomString()),
-      [{ key: "id", primaryKey: true }],
+      "xid",
     );
     expect(await store.remove("*")).toBe(0);
-    expect(await store.add({ id: "a", xname: "aaa" })).toBe(undefined);
-    expect(await store.findMany()).toMatchObject([{ id: "a", xname: "aaa" }]);
+    expect(await store.add({ xid: "a", xname: "aaa" })).toBe(undefined);
+    expect(await store.findMany()).toMatchObject([{ xid: "a", xname: "aaa" }]);
     expect(await store.remove("*")).toBe(1);
-    expect(await store.add({ id: "a", xname: "aaa" })).toBe(undefined);
+    expect(await store.add({ xid: "a", xname: "aaa" })).toBe(undefined);
     expect(await store.findOne("a")).toMatchObject({ xname: "aaa", id: "a" });
     expect(await store.remove("a")).toBe(1);
     expect(await store.findOne("a").catch(e => e.name)).toBe("NotFoundError");

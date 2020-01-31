@@ -1,4 +1,4 @@
-import { isValidID, isValidPartitionName, ID_MAX_VALUE } from "../src/keys";
+import { isValidID, ID_MAX_VALUE } from "../src/internal";
 
 function expectValidID(expected: boolean, value: string) {
   if (isValidID(value) !== expected) {
@@ -10,7 +10,7 @@ const chars = `\`'",.;:<>?/{}[]()_-=+*&^%$#@!~\\/`;
 const numbers = "0123456789";
 const alpha = "abcdefghijklmniopqrstuvwxyz";
 
-describe("isValidID", () => {
+describe("isValidID (internal)", () => {
   it("Valid id", () => {
     for (const c of chars) {
       expectValidID(false, c);
@@ -40,29 +40,6 @@ describe("isValidID", () => {
     expect(isValidID(function() {})).toBe(false);
   });
 
-  it("is Valid PartitionName", () => {
-    expect(isValidPartitionName("")).toBe(false);
-    expect(isValidPartitionName(" ")).toBe(false);
-    expect(isValidPartitionName(null)).toBe(false);
-    expect(isValidPartitionName(undefined)).toBe(false);
-    expect(isValidPartitionName({})).toBe(false);
-    expect(isValidPartitionName(function() {})).toBe(false);
-    for (const c of Array(chars).filter(x => x !== "_" && x !== "-")) {
-      expect(isValidPartitionName(c)).toBe(false);
-      for (const n of numbers) {
-        expect(isValidPartitionName(n)).toBe(true);
-        for (const a of alpha) {
-          expect(isValidPartitionName(a)).toBe(true);
-          expect(isValidPartitionName(a + n + c)).toBe(false);
-          expect(isValidPartitionName(n + c + a)).toBe(false);
-          expect(isValidPartitionName(c + a)).toBe(false);
-          expect(isValidPartitionName(c + n)).toBe(false);
-          expect(isValidPartitionName(n + c)).toBe(false);
-          expect(isValidPartitionName(a + c)).toBe(false);
-        }
-      }
-    }
-  });
   it("maxPrimaryKeyValue", () => {
     expect(
       ID_MAX_VALUE >

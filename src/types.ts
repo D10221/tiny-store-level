@@ -1,32 +1,8 @@
 import { Query } from "jsonquery";
-export type SchemaValueType =
-  | "array"
-  | "boolean"
-  | "date"
-  | "number"
-  | "object"
-  | "string";
-export const SchemaValueTypes: SchemaValueType[] = [
-  "array",
-  "boolean",
-  "date",
-  "number",
-  "object",
-  "string",
-];
-export type Schema<T> = {
-  key: keyof T & string;
-  primaryKey?: boolean;
-  notNull?: boolean | undefined;
-  unique?: boolean | undefined;
-  default?: any | undefined;
-  type?: SchemaValueType | SchemaValueType[];
-};
-export type Schemap<T> = { [key in keyof T]: Schema<T> };
 
 export type ID<T> = T[keyof T] & string;
 
-export type StoreRecord<T> = T & { id?: string | undefined } & {
+export type StoreRecord<T> = {
     [key in keyof T]: T[key];
   };
 

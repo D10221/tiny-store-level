@@ -7,9 +7,9 @@ const level = (name: string) =>
 
 describe("Store Deletes", () => {
   it("Deletes", async () => {
-    type Target = { name: string };
-    const store1 = createStore<Target>(level("store1-" + randomString()));
-    const store2 = createStore<Target>(level("store1-" + randomString()));
+    type Target = { name: string; id: string };
+    const store1 = createStore<Target>(level("store1-" + randomString()), "id");
+    const store2 = createStore<Target>(level("store1-" + randomString()), "id");
     store2.add({ id: randomString(), name: "survive-" + randomString() });
     // ...
     expect(await store1.remove("*")).toBe(0);

@@ -7,8 +7,9 @@ const level = (name: string) =>
 
 describe("Queries", () => {
   it("finds value & key", async () => {
-    const store = createStore<{ name: string }>(
-      level(randomString())
+    const store = createStore<{ name: string; id: string }>(
+      level(randomString()),
+      "id",
     );
     const id = randomString();
     const name = "finds key";
