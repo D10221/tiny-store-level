@@ -1,6 +1,5 @@
 const { default: createStore } = require("../dist");
-const levelup = require("levelup");
-const MemDown = require("memdown");
+const db = require("./db");
 const subleveldown = require("subleveldown");
 const assert = require("assert");
 
@@ -127,7 +126,6 @@ async function run(level) {
     assert.equal(found[0].name, "x9999!");
   }
 }
-const db = levelup(new MemDown());
 log("...");
 time("run");
 run(subleveldown(db, randomString(), { valueEncoding: "json" })).then(() =>

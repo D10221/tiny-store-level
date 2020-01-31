@@ -1,3 +1,5 @@
+import { randomBytes } from "crypto";
+
 export const isNullOrUndefined = (x: any): boolean =>
   x === null || x === undefined;
 export const hasValue = (x: any) => !isNullOrUndefined(x);
@@ -63,4 +65,7 @@ export function isValidID(
   regex: RegExp = /^[a-zA-Z0-9]+$/,
 ): x is string {
   return typeof x === "string" && regex.test(x) && x < ID_MAX_VALUE;
+}
+export function randomString(length = 16, enc = "hex") {
+  return randomBytes(length).toString(enc);
 }

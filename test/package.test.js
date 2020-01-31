@@ -9,8 +9,8 @@ function randomString() {
     .toString("hex");
 }
 
-describe("Tiny Store Level", () => {
-  it("works", async () => {
+describe("Package", () => {  
+  it("finds and runs built default export", async () => {
     const db = await levelup(new MemDown());
     const store = await createStore(
       subleveldown(db, randomString(), { valueEncoding: "json" }),
