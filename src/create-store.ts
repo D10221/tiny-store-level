@@ -22,7 +22,7 @@ export class NotImplementedError extends Error {
   }
 }
 
-const nextStore = <T>(
+const createStore = <T>(
   _db: LevelUp,
   patitionName: string,
   schemapOrList?: Schemap<StoreRecord<T>> | Schema<StoreRecord<T>>[],
@@ -149,8 +149,8 @@ const nextStore = <T>(
     findMany,
     findOne,
     remove,
-    sublevel
+    level:sublevel
   };
   return store;
 };
-export default nextStore;
+export default createStore;

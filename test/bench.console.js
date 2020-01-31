@@ -76,7 +76,7 @@ async function run() {
   {
     console.time("sub-level:stream")
     const ret = await new Promise((resolve, reject) => {
-      const stream = store.sublevel.createReadStream();
+      const stream = store.level.createReadStream();
       const result = [];
       stream.on("data", data => {
         result.push(data)
@@ -94,7 +94,7 @@ async function run() {
   {
     console.time("sub-level:stream")
     const ret = await new Promise((resolve, reject) => {
-      const stream = store.sublevel.createReadStream();
+      const stream = store.level.createReadStream();
       const result = [];
       stream.on("data", data => {
         result.push(data)
