@@ -1,20 +1,15 @@
 const createStore = require("../").default;
+const { randomString } = require("../dist/internal");
 const levelup = require("levelup");
 const MemDown = require("memdown");
 const subleveldown = require("subleveldown");
 
-function randomString() {
-  return require("crypto")
-    .randomBytes(16)
-    .toString("hex");
-}
-
-describe("Package", () => {  
+describe("Package", () => {
   it("finds and runs built default export", async () => {
     const db = await levelup(new MemDown());
     const store = await createStore(
       subleveldown(db, randomString(), { valueEncoding: "json" }),
-      "id"
+      "id",
     );
     const id = randomString();
     await store.add({ id, hello: "world" });

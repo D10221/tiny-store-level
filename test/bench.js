@@ -2,11 +2,7 @@ const { default: createStore } = require("../dist");
 const db = require("./db");
 const subleveldown = require("subleveldown");
 const assert = require("assert");
-
-const randomString = (length = 16, enc = "hex") =>
-  require("crypto")
-    .randomBytes(length)
-    .toString(enc);
+const { randomString } = require("../dist/internal");
 
 const noop = () => {};
 const silent = process.argv.indexOf("--silent") !== -1;
