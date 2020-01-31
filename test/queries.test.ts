@@ -1,12 +1,15 @@
 import createStore from "../src";
 import randomString from "./util/random-string";
-import { MemDb } from "./util/level";
-
-let db = MemDb();
+import subleveldown from "subleveldown";
+import db from "./util/db";
+const level = (name: string) =>
+  subleveldown(db, name, { valueEncoding: "json" });
 
 describe("Queries", () => {
   it("finds value & key", async () => {
-    const store = createStore<{ name: string }>(db, randomString());
+    const store = createStore<{ name: string }>(
+      level(randomString())
+    );
     const id = randomString();
     const name = "finds key";
     await store.add({ id: id, name });

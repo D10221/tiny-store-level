@@ -19,9 +19,9 @@ export function isNotFoundError(error: Error): error is Error {
 export const toPromise = <X>(stream: NodeJS.ReadableStream) =>
   new Promise<X[]>((resolve, reject) => {
     try {
-      let result: X[] = []
+      let result: X[] = [];
       stream.on("data", chunk => {
-        result.push(chunk)
+        result.push(chunk);
       });
       stream.on("error", error => {
         reject(error);
@@ -34,3 +34,8 @@ export const toPromise = <X>(stream: NodeJS.ReadableStream) =>
       reject(error);
     }
   });
+export class NotImplementedError extends Error {
+  constructor(what: string) {
+    super(`"${what}" Not Implemented`);
+  }
+}

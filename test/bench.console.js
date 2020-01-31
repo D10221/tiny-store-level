@@ -1,9 +1,9 @@
 const { default: createStore } = require("../dist");
-const encoding = require("encoding-down");
 const levelup = require("levelup");
 const MemDown = require("memdown");
+const subleveldown = require("subleveldown");
 
-const MemDb = () => levelup(encoding(new MemDown(), { valueEncoding: "json" }));
+const MemDb = () => levelup(new MemDown());
 
 const assert = require("assert");
 
@@ -13,9 +13,10 @@ function randomString() {
     .toString("hex");
 }
 
-async function run() {
+async function run(db) {
   const loopCount = 10000;
-  const store = createStore(MemDb(), randomString());
+
+  const store = createStore(db);
   {
     await (() => {
       console.time("add:1");
@@ -39,7 +40,7 @@ async function run() {
   {
     console.time(`remove:${loopCount}`);
     await store.remove("*");
-    console.timeEnd(`remove:${loopCount}`)
+    console.timeEnd(`remove:${loopCount}`);
   }
   {
     console.time(`add:x${loopCount}`);
@@ -74,36 +75,36 @@ async function run() {
     assert.equal(x.name, `x${one}!`);
   }
   {
-    console.time("sub-level:stream")
+    console.time("sub-level:stream");
     const ret = await new Promise((resolve, reject) => {
-      const stream = store.level.createReadStream();
+      const stream = db.createReadStream();
       const result = [];
       stream.on("data", data => {
-        result.push(data)
+        result.push(data);
       });
       stream.on("end", () => {
-        resolve(result)
+        resolve(result);
       });
-      stream.on("error", (error) => {
-        reject(error)
+      stream.on("error", error => {
+        reject(error);
       });
     });
     console.timeEnd("sub-level:stream");
     assert.equal(ret.length, loopCount);
   }
   {
-    console.time("sub-level:stream")
+    console.time("sub-level:stream");
     const ret = await new Promise((resolve, reject) => {
-      const stream = store.level.createReadStream();
+      const stream = db.createReadStream();
       const result = [];
       stream.on("data", data => {
-        result.push(data)
+        result.push(data);
       });
       stream.on("end", () => {
-        resolve(result)
+        resolve(result);
       });
-      stream.on("error", (error) => {
-        reject(error)
+      stream.on("error", error => {
+        reject(error);
       });
     });
     console.timeEnd("sub-level:stream");
@@ -118,13 +119,16 @@ async function run() {
   {
     console.time("findMany:query");
     const found = await store.findMany({
-      name: { $in: ["x9999!"]}
+      name: { $in: ["x9999!"] },
     });
     console.timeEnd("findMany:query");
     assert.equal(found[0].name, "x9999!");
   }
-  {
-    
-  }
 }
-run();
+console.time("run");
+const timeEnd = () => console.timeEnd("run");
+run(subleveldown(
+  MemDb(), 
+  randomString(), 
+  { valueEncoding: "json" }))
+  .then(timeEnd);

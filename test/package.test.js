@@ -2,7 +2,10 @@
  * @type {import("../").CreateStore}
  */
 const { default: createStore } = require("../");
-const { MemDb } = require("./util/level");
+const levelup = require("levelup");
+const MemDown = require("memdown");
+
+export const MemDb = () => levelup(new MemDown());
 
 function randomString() {
   return require("crypto")
@@ -13,7 +16,7 @@ function randomString() {
 describe("Tiny Store Level", () => {
   it("works", async () => {
     const db = await MemDb();
-    const stuff = await createStore(db, "stuff");
+    const stuff = await createStore(db, randomString());
     const id = randomString();
     await stuff.add({ id: id, hello: "world" });
     const x = await stuff.findOne(id);

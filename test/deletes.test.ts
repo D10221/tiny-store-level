@@ -1,14 +1,15 @@
 import createStore from "../src";
-import { MemDb } from "./util/level";
 import randomString from "./util/random-string";
-
-let db = MemDb();
+import subleveldown from "subleveldown";
+import db from "./util/db";
+const level = (name: string) =>
+  subleveldown(db, name, { valueEncoding: "json" });
 
 describe("Store Deletes", () => {
   it("Deletes", async () => {
     type Target = { name: string };
-    const store1 = createStore<Target>(db, "store1-" + randomString());
-    const store2 = createStore<Target>(db, "store2-" + randomString());
+    const store1 = createStore<Target>(level("store1-" + randomString()));
+    const store2 = createStore<Target>(level("store1-" + randomString()));
     store2.add({ id: randomString(), name: "survive-" + randomString() });
     // ...
     expect(await store1.remove("*")).toBe(0);

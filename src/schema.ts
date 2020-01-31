@@ -88,7 +88,6 @@ const fromList = <T>(input: Schema<StoreRecord<T>>[]) => {
  *
  */
 export default function Schemas<T>(
-  schemaName: string,
   schemapOrList?: Schemap<StoreRecord<T>> | Schema<StoreRecord<T>>[],
 ) {
   const { schemas, schemaList, schemaKeys } = Array.isArray(schemapOrList)
@@ -173,13 +172,13 @@ export default function Schemas<T>(
         const schema = schemas[schemaKey];
         if (schema.notNull && isNullOrUndefined(record[schema.key]))
           throw new SchemaError(
-            `${schemaName}: '${schema.key}' cannot be null`,
+            `'${schema.key}' cannot be null`,
           );
         if (schema.type)
           if (hasValue(record[schema.key])) {
             if (!isValidType(schema, record[schema.key]))
               throw new SchemaError(
-                `${schemaName}: '${schema.key}' expected Type '${arrify(
+                `'${schema.key}' expected Type '${arrify(
                   schema.type,
                 ).join("|")} ' got '${typeof record[schema.key]} '`,
               );
@@ -192,7 +191,7 @@ export default function Schemas<T>(
             .find(x => x[schemaKey] === record[schemaKey]);
           if (Boolean(prev))
             throw new SchemaError(
-              `${schemaName}: '${schemaKey}' 'Must be unique'`,
+              `'${schemaKey}' 'Must be unique'`,
             );
         }
       }

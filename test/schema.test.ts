@@ -2,15 +2,19 @@ import createStore from "../src";
 import { SchemaError } from "../src/schema";
 import { toDate } from "./util/dates";
 import randomString from "./util/random-string";
-import { MemDb } from "./util/level";
+import subleveldown from "subleveldown";
+import db from "./util/db";
 
-let db = MemDb();
+const level = (name: string) =>
+  subleveldown(db, name, { valueEncoding: "json" });
 
 describe("Schema", () => {
   it("Schema rejects not in schema", async () => {
     const store = createStore<{
       name: string;
-    }>(db, "things4", [{ key: "name", notNull: true, unique: true }]);
+    }>(level( "things4"), [
+      { key: "name", notNull: true, unique: true },
+    ]);
     const x = await store.add({ id: "a", x: "aaa" } as any).catch(e => e);
     expect(x).toBeInstanceOf(SchemaError);
   });
@@ -18,7 +22,7 @@ describe("Schema", () => {
   it("Schema rejects bad types (UPDATE)", async () => {
     const store = createStore<{
       ok: any;
-    }>(db, "things-" + randomString(), [
+    }>(level( "things-" + randomString()), [
       {
         key: "ok",
         notNull: true,
@@ -35,7 +39,7 @@ describe("Schema", () => {
     expect(
       await createStore<{
         name: any;
-      }>(db, "things-" + randomString(), [
+      }>(level( "things-" + randomString()), [
         {
           key: "name",
           notNull: true,
@@ -50,7 +54,7 @@ describe("Schema", () => {
     expect(
       await createStore<{
         name: any;
-      }>(db, "things-" + randomString(), [
+      }>(level( "things-" + randomString()), [
         {
           key: "name",
           notNull: true,
@@ -65,7 +69,7 @@ describe("Schema", () => {
     expect(
       await createStore<{
         name: any;
-      }>(db, "things-" + randomString(), [
+      }>(level( "things-" + randomString()), [
         {
           key: "name",
           notNull: true,
@@ -80,7 +84,7 @@ describe("Schema", () => {
     expect(
       await createStore<{
         name: any;
-      }>(db, "things-" + randomString(), [
+      }>(level( "things-" + randomString()), [
         {
           key: "name",
           notNull: true,
@@ -95,7 +99,7 @@ describe("Schema", () => {
     expect(
       await createStore<{
         name: any;
-      }>(db, "things-" + randomString(), [
+      }>(level( "things-" + randomString()), [
         {
           key: "name",
           notNull: true,
@@ -114,7 +118,7 @@ describe("Schema", () => {
     const store = createStore<{
       name: string;
       createdAt?: string | number | Date | undefined;
-    }>(db, "things7", [
+    }>(level( "things7"), [
       {
         key: "name",
         notNull: true,
@@ -135,7 +139,7 @@ describe("Schema", () => {
     const store = createStore<{
       name: string;
       createdAt?: string | number | Date | undefined;
-    }>(db, "things11", [
+    }>(level( "things11"), [
       // schema
       { key: "name", notNull: true, unique: true, type: "string" },
     ]);
@@ -155,7 +159,7 @@ describe("Schema", () => {
     const store = createStore<{
       xname: string;
       createdAt?: string | number | Date | undefined;
-    }>(db, "things9", [
+    }>(level( "things9"), [
       { key: "xname", notNull: true, unique: true, type: "string" },
     ]);
     {
@@ -169,7 +173,7 @@ describe("Schema", () => {
 
   it("Not primary (override)", async () => {
     expect(() => {
-      return createStore<{ id: string }>(db, randomString(), [
+      return createStore<{ id: string }>(level( randomString()), [
         { key: "id" }, // Not primary , but id is been overriden
       ]);
     }).toThrow(SchemaError);
@@ -177,26 +181,29 @@ describe("Schema", () => {
 
   it("Too many keys", async () => {
     expect(() => {
-      createStore<{ idx: string; idz: string }>(db, randomString(), [
-        { key: "idx", primaryKey: true },
-        { key: "idz", primaryKey: true },
-      ]);
+      createStore<{ idx: string; idz: string }>(
+        level( randomString()),
+        [
+          { key: "idx", primaryKey: true },
+          { key: "idz", primaryKey: true },
+        ],
+      );
     }).toThrowError(SchemaError);
   });
 
   it("Bad Key", async () => {
     expect(() => {
-      createStore<{ idx: string }>(db, randomString(), [
+      createStore<{ idx: string }>(level( randomString()), [
         { key: "idx", primaryKey: true, unique: true, notNull: false },
       ]);
     }).toThrowError(SchemaError);
     expect(() => {
-      createStore<{ idx: string }>(db, randomString(), [
+      createStore<{ idx: string }>(level( randomString()), [
         { key: "idx", primaryKey: true, unique: true, notNull: false },
       ]);
     }).toThrowError(SchemaError);
     expect(() => {
-      createStore<{ idx: string }>(db, randomString(), [
+      createStore<{ idx: string }>(level( randomString()), [
         {
           key: "idx",
           primaryKey: true,
@@ -206,7 +213,7 @@ describe("Schema", () => {
       ]);
     }).toThrowError(SchemaError);
     expect(() => {
-      createStore<{ idx: string }>(db, randomString(), [
+      createStore<{ idx: string }>(level( randomString()), [
         { key: "idx", primaryKey: true, type: "number" },
       ]);
     }).toThrowError(SchemaError);

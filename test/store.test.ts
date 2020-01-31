@@ -1,20 +1,22 @@
 import createStore from "../src";
 import { KeyError } from "../src/keys";
-import { MemDb } from "./util/level";
 import randomString from "./util/random-string";
+import subleveldown from "subleveldown";
+import db from "./util/db";
 
-let db = MemDb();
+const level = (name: string) =>
+  subleveldown(db, name, { valueEncoding: "json" });
 
 describe("Level Store", () => {
   // ...
   it("finds nothing", async () => {
-    const things = createStore(db, "things");
+    const things = createStore(level("things"));
     const x = await things.findMany();
     expect(x).toMatchObject([]);
   });
 
   it("is not found error", async () => {
-    const store = createStore<{ name: string }>(db, "things13", [
+    const store = createStore<{ name: string }>(level("things13"), [
       { key: "name", notNull: true, unique: true, type: "string" },
     ]);
     const id = randomString();
@@ -27,7 +29,7 @@ describe("Level Store", () => {
   });
 
   it("IDS: rejects duplicated id", async () => {
-    const store = createStore<{}>(db, "things3");
+    const store = createStore<{}>(level("things3"));
     const id = randomString();
     await store.add({ id });
     const x = await store.add({ id }).catch(e => e);
@@ -35,20 +37,22 @@ describe("Level Store", () => {
   });
 
   it("IDS: rejects bad id", async () => {
-    const store = createStore<{}>(db, "things3");
+    const store = createStore<{}>(level("things3"));
     expect(await store.add({ id: "_%$#@" }).catch(x => x)).toBeInstanceOf(
       KeyError,
     );
   });
 
   it("IDS: throws not found", async () => {
-    const things = createStore<{ name: string }>(db, "things");
+    const things = createStore<{ name: string }>(level("things"));
     const x = await things.findOne("a").catch(error => error);
     expect(x.name).toBe("NotFoundError");
   });
 
   it("Updates: keeps other values", async () => {
-    const store = createStore<{ name: string; xyz: string }>(db, "things125");
+    const store = createStore<{ name: string; xyz: string }>(
+      level("things125"),
+    );
     {
       const id = randomString();
       await store.add({ id, name: "bob", xyz: "z" });
@@ -66,7 +70,7 @@ describe("Level Store", () => {
     }
   });
   it("Updates: rejects invalid Or missig key", async () => {
-    const store = createStore(db, "xxx-" + randomString());
+    const store = createStore(level("xxx-" + randomString()));
     await store.add({ id: "1" });
     const ret = await store
       .update({
@@ -78,8 +82,7 @@ describe("Level Store", () => {
   });
   it("Works alt id", async () => {
     const store = createStore<{ xname: string; id: string }>(
-      db,
-      randomString(),
+      level(randomString()),
       [{ key: "id", primaryKey: true }],
     );
     expect(await store.remove("*")).toBe(0);

@@ -1,9 +1,9 @@
 const { default: createStore } = require("../dist");
-const encoding = require("encoding-down");
 const levelup = require("levelup");
 const MemDown = require("memdown");
+const subleveldown = require("subleveldown");
 
-const MemDb = () => levelup(encoding(new MemDown(), { valueEncoding: "json" }));
+const MemDb = () => levelup(new MemDown());
 
 function randomString() {
   return require("crypto")
@@ -11,7 +11,7 @@ function randomString() {
     .toString("hex");
 }
 async function run() {
-  const store = createStore(MemDb(), randomString());
+  const store = createStore(MemDb());
   await store.add({ id: "1", name: "1" });
   const loopCount = 10000;
   for (let i = 0; i < loopCount; i++) {
@@ -22,3 +22,7 @@ async function run() {
   await store.findMany();
 }
 run();
+run(subleveldown(
+  MemDb(), 
+  randomString(), 
+  { valueEncoding: "json" }));  
