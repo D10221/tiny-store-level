@@ -1,17 +1,45 @@
-import createStore from "../src";
-import { KeyError, randomString } from "../src/internal";
+import { createStore, KeyError } from "../src";
 import subleveldown from "subleveldown";
 import db from "./db";
+
+function randomString(length = 16, enc = "hex") {
+  return require("crypto").randomBytes(length).toString(enc);
+}
 
 const level = (name: string) =>
   subleveldown(db, name, { valueEncoding: "json" });
 
 type WithID<T> = T & { id: string };
 
+describe("ids", () => {
+  it("rejects existing", async () => {
+    const store = createStore<WithID<{}>>("id", level(randomString()));
+    const id = randomString();
+    await store.add({ id });
+    const x = await store.add({ id }).catch(e => e);
+    expect(x).toBeInstanceOf(KeyError);
+  });
+
+  it("rejects invalid", async () => {
+    const store = createStore<WithID<{}>>("id", level(randomString()));
+    const e = await store.add({ id: "_%$#@" }).catch(x => x);
+    expect(e).toBeInstanceOf(KeyError);
+  });
+
+  it("throws not found", async () => {
+    const store = createStore<WithID<{ name: string }>>(
+      "id",
+      level(randomString()),
+    );
+    const x = await store.findOne("a").catch(error => error);
+    expect(x.name).toBe("NotFoundError");
+  });
+});
+
 describe("Level Store", () => {
   // ...
   it("finds nothing", async () => {
-    const store = createStore<WithID<{}>>(level(randomString()), "id");
+    const store = createStore<WithID<{}>>("id", level(randomString()));
 
     const x = await store.findMany();
     expect(x).toMatchObject([]);
@@ -19,8 +47,8 @@ describe("Level Store", () => {
 
   it("is not found error", async () => {
     const store = createStore<WithID<{ name: string }>>(
-      level(randomString()),
       "id",
+      level(randomString()),
     );
     const id = randomString();
     const aName = randomString();
@@ -31,33 +59,10 @@ describe("Level Store", () => {
     expect((found as Error).name === "NotFoundError").toBe(true);
   });
 
-  it("IDS: rejects duplicated id", async () => {
-    const store = createStore<WithID<{}>>(level(randomString()), "id");
-    const id = randomString();
-    await store.add({ id });
-    const x = await store.add({ id }).catch(e => e);
-    expect(x).toBeInstanceOf(KeyError);
-  });
-
-  it("IDS: rejects bad id", async () => {
-    const store = createStore<WithID<{}>>(level(randomString()), "id");
-    const e = await store.add({ id: "_%$#@" }).catch(x => x);
-    expect(e).toBeInstanceOf(KeyError);
-  });
-
-  it("IDS: throws not found", async () => {
-    const store = createStore<WithID<{ name: string }>>(
-      level(randomString()),
-      "id",
-    );
-    const x = await store.findOne("a").catch(error => error);
-    expect(x.name).toBe("NotFoundError");
-  });
-
   it("Updates: keeps other values", async () => {
     const store = createStore<WithID<{ name: string; xyz: string }>>(
-      level(randomString()),
       "id",
+      level(randomString()),
     );
     {
       const id = randomString();
@@ -77,8 +82,8 @@ describe("Level Store", () => {
   });
   it("Updates: rejects invalid Or missig key", async () => {
     const store = createStore<{ id: string }>(
-      level("xxx-" + randomString()),
       "id",
+      level("xxx-" + randomString()),
     );
     await store.add({ id: "1" });
     const ret = await store
@@ -91,8 +96,8 @@ describe("Level Store", () => {
   });
   it("Works alt id", async () => {
     const store = createStore<{ xname: string; xid: string }>(
-      level(randomString()),
       "xid",
+      level(randomString()),
     );
     expect(await store.remove("*")).toBe(0);
     expect(await store.add({ xid: "a", xname: "aaa" })).toBe(undefined);
@@ -106,8 +111,8 @@ describe("Level Store", () => {
 
   it("Deletes", async () => {
     type Target = { name: string; id: string };
-    const store1 = createStore<Target>(level("store1-" + randomString()), "id");
-    const store2 = createStore<Target>(level("store1-" + randomString()), "id");
+    const store1 = createStore<Target>("id", level("store1-" + randomString()));
+    const store2 = createStore<Target>("id", level("store1-" + randomString()));
     store2.add({ id: randomString(), name: "survive-" + randomString() });
     // ...
     expect(await store1.remove("*")).toBe(0);
@@ -139,12 +144,11 @@ describe("Level Store", () => {
     );
   });
 });
-
 describe("Queries", () => {
   it("finds value & key", async () => {
     const store = createStore<{ name: string; id: string }>(
-      level(randomString()),
       "id",
+      level(randomString()),
     );
     const id = randomString();
     const name = "finds key";

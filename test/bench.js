@@ -1,8 +1,12 @@
-const { default: createStore } = require("../dist");
-const db = require("./db");
+const { createStore } = require("../dist");
 const subleveldown = require("subleveldown");
 const assert = require("assert");
-const { randomString } = require("../dist/internal");
+
+function randomString(length = 16, enc = "hex") {
+  return require("crypto")
+    .randomBytes(length)
+    .toString(enc);
+}
 
 const noop = () => {};
 const silent = process.argv.indexOf("--silent") !== -1;
@@ -13,7 +17,7 @@ const log = silent ? noop : console.log.bind(console);
 async function run(level) {
   const loopCount = 10000;
 
-  const store = createStore(level, "id");
+  const store = createStore("id", level);
   {
     await (() => {
       time("add:1");
@@ -121,9 +125,29 @@ async function run(level) {
     timeEnd("findMany:query");
     assert.equal(found[0].name, "x9999!");
   }
+  {
+    const id = randomString();
+    time("set:one");
+    await store.set({
+      id,
+    });
+    timeEnd("set:one");
+    const x = await store.findOne(id);
+    assert.equal(x.id, id);
+  }
+  {
+    const id = randomString();
+    time("put:one");
+    await store.put({
+      id,
+    });
+    timeEnd("put:one");
+    const x = await store.findOne(id);
+    assert.equal(x.id, id);
+  }
 }
 log("...");
 time("run");
-run(subleveldown(db, randomString(), { valueEncoding: "json" })).then(() =>
-  timeEnd("run"),
-);
+run(
+  subleveldown(require("./db"), randomString(), { valueEncoding: "json" }),
+).then(() => timeEnd("run"));

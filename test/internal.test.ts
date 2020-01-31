@@ -1,4 +1,4 @@
-import { isValidID, ID_MAX_VALUE } from "../src/internal";
+import { isValidID, ID_MAX_VALUE } from "../src";
 
 function expectValidID(expected: boolean, value: string) {
   if (isValidID(value) !== expected) {
