@@ -15,48 +15,67 @@ import { isNotFoundError, toPromise, NotImplementedError } from "./util";
 import schema from "./schema";
 import { isValidID, KeyError } from "./keys";
 /**
- * 
+ *
  * @param level sublevel
- * @param schemapOrList 
+ * @param schemapOrList
  */
 const createStore = <T>(
-  level: LevelUp, 
+  level: LevelUp,
   schemapOrList?: Schemap<StoreRecord<T>> | Schema<StoreRecord<T>>[],
 ) => {
   const { primaryKey, validate } = schema<T>(schemapOrList);
-  const exists: Exists<StoreRecord<T>> = async queryOrId => {
-    if (typeof queryOrId === "string") {
+  /**
+   *
+   * @param args id or jsonquery
+   */
+  const exists: Exists<StoreRecord<T>> = async args => {
+    if (typeof args === "string") {
       try {
-        await level.get(queryOrId);
+        await level.get(args);
         return true;
       } catch (error) {
         if (isNotFoundError(error)) return false;
         throw error;
       }
     }
-    return toPromise(
-      level
-        .createReadStream({
-          values: true,
-          keys: false,
-          limit: 1,
-        })
-        .pipe(jsonquery(queryOrId)),
-    ).then(x => Boolean(x.length));
+    if (typeof args === "object")
+      return toPromise(
+        level
+          .createReadStream({
+            values: true,
+            keys: false,
+            limit: 1,
+          })
+          .pipe(jsonquery(args)),
+      ).then(x => Boolean(x.length));
+    return Promise.reject(
+      new NotImplementedError(
+        `@args "${args}" of type ${typeof args} is Not Implemented`,
+      ),
+    );
   };
-
-  const findOne: FindOne<T> = async (queryOrId): Promise<T> => {
-    if (typeof queryOrId === "string") {
+  /**
+   *
+   * @param args id or jsonquery
+   */
+  const findOne: FindOne<T> = async (args): Promise<T> => {
+    if (typeof args === "string") {
       try {
-        const value = await level.get(queryOrId); //throws ?
-        return { ...value, id: queryOrId };
+        const value = await level.get(args); //throws ?
+        return { ...value, id: args };
       } catch (error) {
         return Promise.reject(error);
       }
     }
-    return toPromise<StoreRecord<T>>(
-      level.createValueStream({ limit: 1 }).pipe(jsonquery(queryOrId)),
-    ).then(values => values[0]);
+    if (typeof args === "object")
+      return toPromise<StoreRecord<T>>(
+        level.createValueStream({ limit: 1 }).pipe(jsonquery(args)),
+      ).then(values => values[0]);
+    return Promise.reject(
+      new NotImplementedError(
+        `@args "${args}" of type ${typeof args} is Not Implemented`,
+      ),
+    );
   };
   /**
    *
@@ -106,39 +125,46 @@ const createStore = <T>(
       return toPromise(level.createValueStream());
     }
   };
-  const remove: Delete<T> = async idOrquery => {
-    if (typeof idOrquery === "string" && idOrquery === "*") {
+  /**
+   *
+   * @param args id or "*" or jsonquery
+   */
+  const remove: Delete<T> = async args => {
+    if (typeof args === "string" && args === "*") {
       // delete all keys
       const keys = await toPromise<string>(level.createKeyStream());
       await level.clear(); //is it faster to use del?
       return keys.length;
     }
-    if (typeof idOrquery === "string") {
+    if (typeof args === "string") {
       // its an id
-      if (!(await exists(idOrquery))) {
-        return Promise.reject(KeyError.idNotFound(primaryKey.key, idOrquery));
+      if (!(await exists(args))) {
+        return Promise.reject(KeyError.idNotFound(primaryKey.key, args));
       }
-      await level.del(idOrquery);
+      await level.del(args);
       return Promise.resolve(1);
     }
-    if (typeof idOrquery === "object") {
+    if (typeof args === "object") {
       // delete some criteria based
-      const keys = await toPromise<string>(level.createKeyStream());
-      return Promise.all(keys.map(key => level.del(key))).then(
-        () => keys.length,
+      const values = await toPromise<StoreRecord<T>>(
+        // needs values to process querie
+        level.createValueStream().pipe(jsonquery(args)),
+      );
+      return Promise.all(values.map(x => level.del(x[primaryKey.key]))).then(
+        () => values.length,
       );
     }
     return Promise.reject(
       new NotImplementedError(
-        `@arg idOrquery=${idOrquery} of type ${typeof idOrquery} is Not Implemented`,
+        `@args "${args}" of type ${typeof args} is Not Implemented`,
       ),
     );
   };
-  const store = {   
+  const store = {
     add,
     exists,
     findMany,
-    findOne,    
+    findOne,
     remove,
     update,
   };
