@@ -1,8 +1,11 @@
 import { randomBytes } from "crypto";
 
-export const isNullOrUndefined = (x: any): boolean =>
-  x === null || x === undefined;
+export const isNullOrUndefined = <T>(
+  x: T | null | undefined,
+): x is null | undefined => x === null || x === undefined;
+
 export const hasValue = (x: any) => !isNullOrUndefined(x);
+
 export const isFunction = (x: any) => typeof x === "function";
 export const arrify = <T>(x: T | T[]): T[] =>
   isNullOrUndefined(x) ? [] : Array.isArray(x) ? x : [x];
@@ -50,7 +53,7 @@ export class KeyError extends Error {
   static invalidOrMissigID(key: any, id?: any) {
     return new KeyError(`Invalid or missing "${key}"="${id}"`);
   }
-  static idExists(key: any, id: string) {
+  static idExists(key: any, id?: any) {
     return new KeyError(`Key/ID exists "${key}=${id}"`);
   }
   static idNotFound(key: any, id?: any) {
