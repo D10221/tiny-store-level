@@ -8,6 +8,7 @@ import {
   isValidID,
   KeyError,
 } from "./internal";
+// keeps typescript happy, or need to import all level types and re-export them
 const merge = <A, B>(a: A, b: B): A & B => Object.assign(a, b);
 /**
  *
@@ -89,42 +90,43 @@ export default function createStore<T>(
       return Promise.reject(error);
     }
   };
-  const put = (data: Record) =>
-    level.put(data[pkey], {
-      ...data,
-      [pkey]: data[pkey],
+  /** internal */
+  const putRecord = (record: Record) =>
+    level.put(record[pkey], {
+      ...record,
+      [pkey]: record[pkey],
     });
-  async function set(data: Record, mode?: "insert" | "update") {
+  async function setRecord(record: Record) {
     try {
-      if (isNullOrUndefined(data))
-        throw new Error("@arg data cannot be null|undefined");
-      const id = data[pkey];
+      if (isNullOrUndefined(record))
+        throw new Error("@arg record cannot be null|undefined");
+      const id = record[pkey];
       if (!idtest(id)) throw KeyError.invalidOrMissigID(pkey, id);
-      return put(data);
+      return putRecord(record);
     } catch (error) {
       return Promise.reject(error);
     }
   }
-  const add = async (data: Record) => {
+  const add = async (record: Record) => {
     try {
-      if (isNullOrUndefined(data))
-        throw new Error("@arg data cannot be null|undefined");
-      const id = data[pkey];
+      if (isNullOrUndefined(record))
+        throw new Error("@arg record cannot be null|undefined");
+      const id = record[pkey];
       if (!idtest(id)) throw KeyError.invalidOrMissigID(pkey, id);
       if (await exists(id)) return Promise.reject(KeyError.idExists(pkey, id));
-      return put(data);
+      return putRecord(record);
     } catch (error) {
       return Promise.reject(error);
     }
   };
-  const update = async (data: Partial<Record>): Promise<void> => {
+  const update = async (record: Partial<Record>): Promise<void> => {
     try {
-      if (isNullOrUndefined(data))
-        throw new Error("@arg data cannot be null|undefined");
-      const id = data[pkey];
+      if (isNullOrUndefined(record))
+        throw new Error("@arg record cannot be null|undefined");
+      const id = record[pkey];
       if (!idtest(id)) throw KeyError.invalidOrMissigID(pkey, id);
       const prev = await level.get(id);
-      return put({ ...prev, ...data });
+      return putRecord({ ...prev, ...record });
     } catch (error) {
       return Promise.reject(error);
     }
@@ -169,31 +171,17 @@ export default function createStore<T>(
         ),
       );
   };
+  //Attach to instance
   const store = {
     add,
     exists,
     findMany,
     findOne,
+    putRecord,
     remove,
-    set,
+    setRecord,
     update,
-    put,
   };
-  const ret = {
-    put: level.put.bind(level),
-    get: level.get.bind(level),
-    del: level.del.bind(level),
-    clear: level.clear.bind(level),
-    batch: level.batch.bind(level),
-    iterator: level.iterator.bind(level),
-    isOpen: level.isOpen.bind(level),
-    isClosed: level.isClosed.bind(level),
-    createReadStream: level.createReadStream.bind(level),
-    createKeyStream: level.createKeyStream.bind(level),
-    createValueStream: level.createValueStream.bind(level),
-    on: level.on.bind(level),
-    ...store,
-  } as LevelUp & typeof store; // ?? Typescript!
-  // keeps typescript happy, or need to import all level types and re-export them
+  const ret = merge(level, store);
   return ret;
 }

@@ -18,6 +18,33 @@ async function run(level) {
   const loopCount = 10000;
 
   const store = createStore("id", level);
+  /** Warmup */
+  {
+    const id = randomString();
+    time("level:put:one");
+    await level.put(id, {
+      id,
+    });
+    timeEnd("level:put:one");
+    const x = await store.findOne(id);
+    assert.equal(x.id, id);
+  }
+  {
+    const id = randomString();
+    time("store:level:put:one");
+    await store.put(id, {
+      id,
+    });
+    timeEnd("store:level:put:one");
+    const x = await store.findOne(id);
+    assert.equal(x.id, id);
+  }
+  {
+    time("level:clear");
+    await level.clear();
+    timeEnd("level:clear");
+  }
+  /** Warmup:end */
   {
     await (() => {
       time("add:1");
@@ -85,7 +112,7 @@ async function run(level) {
     assert.equal(x.name, `x${one}!`);
   }
   {
-    time("sub-level:stream");
+    time("level:stream");
     const ret = await new Promise((resolve, reject) => {
       const stream = level.createReadStream();
       const result = [];
@@ -99,13 +126,13 @@ async function run(level) {
         reject(error);
       });
     });
-    timeEnd("sub-level:stream");
+    timeEnd("level:stream");
     assert.equal(ret.length, loopCount);
   }
   {
-    time("sub-level:stream");
+    time("store:level:stream");
     const ret = await new Promise((resolve, reject) => {
-      const stream = level.createReadStream();
+      const stream = store.createReadStream();
       const result = [];
       stream.on("data", data => {
         result.push(data);
@@ -117,7 +144,7 @@ async function run(level) {
         reject(error);
       });
     });
-    timeEnd("sub-level:stream");
+    timeEnd("store:level:stream");
     assert.equal(ret.length, loopCount);
   }
   {
@@ -136,21 +163,31 @@ async function run(level) {
   }
   {
     const id = randomString();
-    time("set:one");
-    await store.set({
+    time("setRecord:one");
+    await store.setRecord({
       id,
     });
-    timeEnd("set:one");
+    timeEnd("setRecord:one");
     const x = await store.findOne(id);
     assert.equal(x.id, id);
   }
   {
     const id = randomString();
-    time("put:one");
-    await store.put({
+    time("level:put:one");
+    await level.put(id, {
       id,
     });
-    timeEnd("put:one");
+    timeEnd("level:put:one");
+    const x = await store.findOne(id);
+    assert.equal(x.id, id);
+  }
+  {
+    const id = randomString();
+    time("store:level:put:one");
+    await store.put(id, {
+      id,
+    });
+    timeEnd("store:level:put:one");
     const x = await store.findOne(id);
     assert.equal(x.id, id);
   }
