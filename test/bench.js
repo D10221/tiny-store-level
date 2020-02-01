@@ -1,4 +1,4 @@
-const { createStore } = require("../dist");
+const { createStore } = require("../");
 const subleveldown = require("subleveldown");
 const assert = require("assert");
 
@@ -68,9 +68,18 @@ async function run(level) {
   }
   {
     const one = 9999;
-    time(`findOne:${one}`);
+    time(`findOne:#${one}`);
     const x = await store.findOne(`indexed${one}`).then(x => {
-      timeEnd(`findOne:${one}`);
+      timeEnd(`findOne:#${one}`);
+      return x;
+    });
+    assert.equal(x.name, `x${one}!`);
+  }
+  {
+    const one = 9999;
+    time(`get:#${one}`);
+    const x = await store.get(`indexed${one}`).then(x => {
+      timeEnd(`get:#${one}`);
       return x;
     });
     assert.equal(x.name, `x${one}!`);
