@@ -1,7 +1,6 @@
 import { createStore } from "../src";
 import { KeyError } from "../src/internal";
-import subleveldown from "subleveldown";
-import db from "./db";
+import { sublevel } from "./level";
 
 function randomString(length = 16, enc = "hex") {
   return require("crypto")
@@ -9,14 +8,11 @@ function randomString(length = 16, enc = "hex") {
     .toString(enc);
 }
 
-const level = (name: string) =>
-  subleveldown(db, name, { valueEncoding: "json" });
-
 type WithID<T> = T & { id: string };
 
 describe("ids", () => {
   it("rejects existing", async () => {
-    const store = createStore<WithID<{}>>("id", level(randomString()));
+    const store = createStore<WithID<{}>>("id", sublevel(randomString()));
     const id = randomString();
     await store.add({ id });
     const x = await store.add({ id }).catch(e => e);
@@ -24,7 +20,7 @@ describe("ids", () => {
   });
 
   it("rejects invalid", async () => {
-    const store = createStore<WithID<{}>>("id", level(randomString()));
+    const store = createStore<WithID<{}>>("id", sublevel(randomString()));
     const e = await store.add({ id: "_%$#@" }).catch(x => x);
     expect(e).toBeInstanceOf(KeyError);
   });
@@ -32,7 +28,7 @@ describe("ids", () => {
   it("throws not found", async () => {
     const store = createStore<WithID<{ name: string }>>(
       "id",
-      level(randomString()),
+      sublevel(randomString()),
     );
     const x = await store.findOne("a").catch(error => error);
     expect(x.name).toBe("NotFoundError");
@@ -42,8 +38,7 @@ describe("ids", () => {
 describe("Level Store", () => {
   // ...
   it("finds nothing", async () => {
-    const store = createStore<WithID<{}>>("id", level(randomString()));
-
+    const store = createStore<WithID<{}>>("id", sublevel(randomString()));
     const x = await store.findMany();
     expect(x).toMatchObject([]);
   });
@@ -51,7 +46,7 @@ describe("Level Store", () => {
   it("is not found error", async () => {
     const store = createStore<WithID<{ name: string }>>(
       "id",
-      level(randomString()),
+      sublevel(randomString()),
     );
     const id = randomString();
     const aName = randomString();
@@ -65,7 +60,7 @@ describe("Level Store", () => {
   it("Updates: keeps other values", async () => {
     const store = createStore<WithID<{ name: string; xyz: string }>>(
       "id",
-      level(randomString()),
+      sublevel(randomString()),
     );
     {
       const id = randomString();
@@ -86,7 +81,7 @@ describe("Level Store", () => {
   it("Updates: rejects invalid Or missig key", async () => {
     const store = createStore<{ id: string }>(
       "id",
-      level("xxx-" + randomString()),
+      sublevel("xxx-" + randomString()),
     );
     await store.add({ id: "1" });
     const ret = await store
@@ -100,7 +95,7 @@ describe("Level Store", () => {
   it("Works alt id", async () => {
     const store = createStore<{ xname: string; xid: string }>(
       "xid",
-      level(randomString()),
+      sublevel(randomString()),
     );
     expect(await store.remove("*")).toBe(0);
     expect(await store.add({ xid: "a", xname: "aaa" })).toBe(undefined);
@@ -114,9 +109,15 @@ describe("Level Store", () => {
 
   it("Deletes", async () => {
     type Target = { name: string; id: string };
-    const store1 = createStore<Target>("id", level("store1-" + randomString()));
-    const store2 = createStore<Target>("id", level("store1-" + randomString()));
-    store2.add({ id: randomString(), name: "survive-" + randomString() });
+    const store1 = createStore<Target>(
+      "id",
+      sublevel("store1-" + randomString()),
+    );
+    const store2 = createStore<Target>(
+      "id",
+      sublevel("store1-" + randomString()),
+    );
+    await store2.add({ id: randomString(), name: "survive-" + randomString() });
     // ...
     expect(await store1.remove("*")).toBe(0);
     expect(await store1.add({ id: "1", name: "one" })).toBe(undefined);
@@ -151,7 +152,7 @@ describe("Queries", () => {
   it("finds value & key", async () => {
     const store = createStore<{ name: string; id: string }>(
       "id",
-      level(randomString()),
+      sublevel(randomString()),
     );
     const id = randomString();
     const name = "finds key";
@@ -175,20 +176,76 @@ describe("accepts, configuration", () => {
         pkey: "id",
         idtest: x => x !== "aaa",
       },
-      level(randomString()),
+      sublevel(randomString()),
     );
     const { add } = store;
     const err = await add({ id: "aaa" }).catch(e => e);
     expect(err).toBeInstanceOf(KeyError);
     await add({ id: "aab" });
-        
   });
 });
-describe("types?", ()=>{
-  // import from package it should ... 
-  it("finds the right types", async ()=>{
-    const p = await import("../");
-    const s = p.createStore("id", db);
-    s.createKeyStream();
-  })
-})
+
+// describe("cheap extends?", () => {
+//   // import from package it should ...
+//   it("can use levelup", async () => {
+//     const p = await import("../");
+//     const {
+//       addListener,
+//       batch,
+//       clear,
+//       close,
+//       createKeyStream,
+//       createReadStream,
+//       createValueStream,
+//       emit,
+//       eventNames,
+//       getMaxListeners,
+//       isClosed,
+//       isOpen,
+//       iterator,
+//       listenerCount,
+//       listeners,
+//       prependListener,
+//       prependOnceListener,
+//       off,
+//       on,
+//       once,
+//       open,
+//       get,
+//       put,
+//       removeAllListeners,
+//       removeListener,
+//       rawListeners,
+//       setMaxListeners,
+//     } = p.createStore("id", levelup);
+//     [
+//       addListener,
+//       batch,
+//       clear,
+//       close,
+//       createKeyStream,
+//       createReadStream,
+//       createValueStream,
+//       emit,
+//       eventNames,
+//       getMaxListeners,
+//       isClosed,
+//       isOpen,
+//       iterator,
+//       listenerCount,
+//       listeners,
+//       prependListener,
+//       prependOnceListener,
+//       off,
+//       on,
+//       once,
+//       open,
+//       get,
+//       put,
+//       removeAllListeners,
+//       removeListener,
+//       rawListeners,
+//       setMaxListeners,
+//     ].forEach(x=> expect(x).toBeInstanceOf(Function));
+//   });
+// });

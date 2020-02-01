@@ -10,8 +10,7 @@
   "repository": "https://github.com/D10221/tiny-store-level.git",
   "homepage": "https://github.com/D10221/tiny-store-level",
   "scripts": {
-    "test": "jest --env=node --ci --silent",
-    "test:level": "cross-env LEVELDOWN=leveldown jest --env=node --ci",
+    "test": "rimraf dbs/ && mkdirp dbs && jest --env=node --ci --silent",
     "pretty": "prettier src**/*.*  test/**/* *.json *.js *.md --write",
     "build": "rimraf dist && microbundle --external crypto,stream,jsonquery -f cjs",
     "-prepublish": "yarn build && yarn test && yarn pretty",

@@ -1,5 +1,4 @@
 const { createStore } = require("../");
-const subleveldown = require("subleveldown");
 const assert = require("assert");
 
 function randomString(length = 16, enc = "hex") {
@@ -194,6 +193,5 @@ async function run(level) {
 }
 log("...");
 time("run");
-run(
-  subleveldown(require("./db"), randomString(), { valueEncoding: "json" }),
-).then(() => timeEnd("run"));
+
+run(require("./level").sublevel(randomString())).then(() => timeEnd("run"));

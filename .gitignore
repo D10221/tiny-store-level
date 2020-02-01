@@ -21,3 +21,4 @@ testdb/
 coverage/
 *.0x/
 **/*_cache_*/*
+dbs/
