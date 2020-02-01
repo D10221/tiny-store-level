@@ -1,9 +1,12 @@
-import { createStore, KeyError } from "../src";
+import { createStore } from "../src";
+import { KeyError } from "../src/internal";
 import subleveldown from "subleveldown";
 import db from "./db";
 
 function randomString(length = 16, enc = "hex") {
-  return require("crypto").randomBytes(length).toString(enc);
+  return require("crypto")
+    .randomBytes(length)
+    .toString(enc);
 }
 
 const level = (name: string) =>
@@ -104,7 +107,7 @@ describe("Level Store", () => {
     expect(await store.findMany()).toMatchObject([{ xid: "a", xname: "aaa" }]);
     expect(await store.remove("*")).toBe(1);
     expect(await store.add({ xid: "a", xname: "aaa" })).toBe(undefined);
-    expect(await store.findOne("a")).toMatchObject({ xname: "aaa", id: "a" });
+    expect(await store.findOne("a")).toMatchObject({ xname: "aaa", xid: "a" });
     expect(await store.remove("a")).toBe(1);
     expect(await store.findOne("a").catch(e => e.name)).toBe("NotFoundError");
   });
@@ -165,3 +168,27 @@ describe("Queries", () => {
     expect(found && found[0] && found[0].id).toBe(id);
   });
 });
+describe("accepts, configuration", () => {
+  it("accepts. idTest", async () => {
+    const store = createStore<{ id: string }>(
+      {
+        pkey: "id",
+        idtest: x => x !== "aaa",
+      },
+      level(randomString()),
+    );
+    const { add } = store;
+    const err = await add({ id: "aaa" }).catch(e => e);
+    expect(err).toBeInstanceOf(KeyError);
+    await add({ id: "aab" });
+        
+  });
+});
+describe("types?", ()=>{
+  // import from package it should ... 
+  it("finds the right types", async ()=>{
+    const p = await import("../");
+    const s = p.createStore("id", db);
+    s.createKeyStream();
+  })
+})

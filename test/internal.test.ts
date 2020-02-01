@@ -1,4 +1,14 @@
-import { isValidID, ID_MAX_VALUE } from "../src";
+import {
+  isValidID,
+  ID_MAX_VALUE,
+  ID_REGEX,
+  KeyError,
+  NotImplementedError,
+  RegexLike,
+  isNotFoundError,
+  isNullOrUndefined,
+  toPromise,
+} from "../src/internal";
 
 function expectValidID(expected: boolean, value: string) {
   if (isValidID(value) !== expected) {
@@ -10,7 +20,26 @@ const chars = `\`'",.;:<>?/{}[]()_-=+*&^%$#@!~\\/`;
 const numbers = "0123456789";
 const alpha = "abcdefghijklmniopqrstuvwxyz";
 
-describe("isValidID (internal)", () => {
+describe("isValidID", () => {
+  it("Checks Length", () => {
+    expect(isValidID("a".repeat(65), /\w+/)).toBe(false);
+  });
+  it("Checks max value", () => {
+    expect(isValidID(ID_MAX_VALUE, /\w+/)).toBe(false);
+  });
+  it("Accepts idtest", () => {
+    expect(isValidID("a", /\d+/)).toBe(false);
+    expect(isValidID("", { test: () => true })).toBe(true);
+  });
+  it("use default param", () => {
+    // to not throw: undefined -> defaults
+    expect(isValidID("", undefined as any)).toBe(false);
+    expect(isValidID("b", undefined as any, "a")).toBe(false);
+  });
+  it("throws", () => {
+    expect(() => isValidID("", null as any)).toThrow(Error);
+    expect(() => isValidID("", false as any)).toThrow(Error);
+  });
   it("Valid id", () => {
     for (const c of chars) {
       expectValidID(false, c);
