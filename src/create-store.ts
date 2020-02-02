@@ -138,14 +138,42 @@ export default function createStore<T>(
       return Promise.reject(error);
     }
   };
-  const findMany = (query?: Query<Record>): Promise<Record[]> => {
-    if (query) {
-      return toPromiseOf(
-        pushRecord,
-        [] as Record[],
-      )(level.createValueStream().pipe(jsonquery(query)));
-    } else {
-      return toPromiseOf(pushRecord, [] as Record[])(level.createValueStream());
+  const findMany = (
+    args: "*" | string | Query<Record> | ((x: Record) => Boolean),
+  ): Promise<Record[]> => {
+    switch (typeof args) {
+      case "string": {
+        switch (args) {
+          case "*":
+            return toPromiseOf(
+              pushRecord,
+              [] as Record[],
+            )(level.createValueStream());
+          default:
+            throw new NotImplementedError(
+              `@args "${args}" of type ${typeof args} is Not Implemented`,
+            );
+        }
+      }
+      case "function": {
+        return toPromiseOf((prev, next: Record) => {
+          if (args(next)) {
+            prev.push(next);
+            return prev;
+          }
+          return prev;
+        }, [] as Record[])(level.createValueStream());
+      }
+      case "object": {
+        return toPromiseOf(
+          pushRecord,
+          [] as Record[],
+        )(level.createValueStream().pipe(jsonquery(args)));
+      }
+      default:
+        throw new NotImplementedError(
+          `@args "${args}" of type ${typeof args} is Not Implemented`,
+        );
     }
   };
   /**

@@ -164,6 +164,13 @@ async function run(level) {
       assert.equal(found[0].name, "x9999!");
     }
     {
+      time("findMany:filter");
+      const toFind = "x9999!";
+      const found = await store.findMany(x => x.name === toFind);
+      timeEnd("findMany:filter");
+      assert.equal(found[0].name, toFind);
+    }
+    {
       const id = randomString();
       time("setRecord:one");
       await store.setRecord({

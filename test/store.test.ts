@@ -39,7 +39,7 @@ describe("Level Store", () => {
   // ...
   it("finds nothing", async () => {
     const store = createStore<WithID<{}>>("id", sublevel(randomString()));
-    const x = await store.findMany();
+    const x = await store.findMany("*");
     expect(x).toMatchObject([]);
   });
 
@@ -56,7 +56,6 @@ describe("Level Store", () => {
     expect(found).toBeInstanceOf(Error);
     expect((found as Error).name === "NotFoundError").toBe(true);
   });
-
   it("Updates: keeps other values", async () => {
     const store = createStore<WithID<{ name: string; xyz: string }>>(
       "id",
@@ -92,21 +91,6 @@ describe("Level Store", () => {
     expect(ret).toBeInstanceOf(KeyError);
     expect(ret.message).toBe(KeyError.invalidOrMissigID("id").message);
   });
-  it("Works alt id", async () => {
-    const store = createStore<{ xname: string; xid: string }>(
-      "xid",
-      sublevel(randomString()),
-    );
-    expect(await store.remove("*")).toBe(0);
-    expect(await store.add({ xid: "a", xname: "aaa" })).toBe(undefined);
-    expect(await store.findMany()).toMatchObject([{ xid: "a", xname: "aaa" }]);
-    expect(await store.remove("*")).toBe(1);
-    expect(await store.add({ xid: "a", xname: "aaa" })).toBe(undefined);
-    expect(await store.findOne("a")).toMatchObject({ xname: "aaa", xid: "a" });
-    expect(await store.remove("a")).toBe(1);
-    expect(await store.findOne("a").catch(e => e.name)).toBe("NotFoundError");
-  });
-
   it("Deletes", async () => {
     type Target = { name: string; id: string };
     const store1 = createStore<Target>(
@@ -122,17 +106,17 @@ describe("Level Store", () => {
     expect(await store1.remove("*")).toBe(0);
     expect(await store1.add({ id: "1", name: "one" })).toBe(undefined);
     expect(await store1.remove("*")).toBe(1);
-    expect((await store1.findMany()).length).toBe(0);
+    expect((await store1.findMany("*")).length).toBe(0);
     expect(await store1.add({ id: "2", name: "two" })).toBe(undefined);
     expect(await store1.add({ id: "3", name: "three" })).toBe(undefined);
-    expect((await store1.findMany()).length).toBe(2);
-    const all = await store1.findMany();
+    expect((await store1.findMany("*")).length).toBe(2);
+    const all = await store1.findMany("*");
     expect(all.length).toBe(2);
     expect(await store1.remove("*")).toBe(2);
     //should not throw key exists
     expect(await store1.add({ id: "a", name: "aaa" })).toBe(undefined);
     expect(await store1.add({ id: "b", name: "bbb" })).toBe(undefined);
-    expect((await store1.findMany()).length).toBe(2); //all there
+    expect((await store1.findMany("*")).length).toBe(2); //all there
     const r = await store1.findMany({ id: { $in: ["a"] } }); //that one there
     expect(r[0].id).toBe("a");
     // should remove exactly 1
@@ -141,32 +125,11 @@ describe("Level Store", () => {
     // Should throw Not found if parameter is an ID
     expect(await store1.findOne("a").catch(e => e.name)).toBe("NotFoundError");
     // Should Not remove other stores
-    const xxx = await store2.findMany();
+    const xxx = await store2.findMany("*");
     expect(Array.isArray(xxx)).toBe(true);
     expect(xxx[0] && xxx[0].name && xxx[0].name.startsWith("survive-")).toBe(
       true,
     );
-  });
-});
-describe("Queries", () => {
-  it("finds value & key", async () => {
-    const store = createStore<{ name: string; id: string }>(
-      "id",
-      sublevel(randomString()),
-    );
-    const id = randomString();
-    const name = "finds key";
-    await store.add({ id: id, name });
-    const all = await store.findMany();
-    expect(all.length).toBe(1);
-    expect(all[0].name).toBe(name);
-    expect(all[0].id).toBe(id);
-    let found = await store.findMany({ name: { $in: [name] } });
-    expect(found && found[0] && found[0].name).toBe(name);
-    expect(found && found[0] && found[0].id).toBe(id);
-    found = await store.findMany({ id: { $in: [id] } });
-    expect(found && found[0] && found[0].name).toBe(name);
-    expect(found && found[0] && found[0].id).toBe(id);
   });
 });
 describe("accepts, configuration", () => {
@@ -182,5 +145,54 @@ describe("accepts, configuration", () => {
     const err = await add({ id: "aaa" }).catch(e => e);
     expect(err).toBeInstanceOf(KeyError);
     await add({ id: "aab" });
+  });
+});
+function* range(from: number, to: number) {
+  while (from <= to) {
+    yield (from += 1);
+  }
+}
+const fromRange = (from: number, to: number) => Array.from(range(from, to));
+
+describe("findMany", () => {
+  const store = createStore<{ name: string; id: string }>(
+    "id",
+    sublevel(randomString()),
+  );
+  beforeAll(async () => {
+    await store.batch(
+      fromRange(1, 100).map(x => ({
+        key: `${x}`,
+        value: { id: `${x}`, name: `x${x}` },
+        type: "put",
+      })),
+    );
+  });
+  it("Finds All", async () => {
+    expect((await store.findMany("*")).length).toBe(100);
+  });
+  it("finds with Query", async () => {
+    const some = await store.findMany({ id: { $in: ["5", "50"] } });
+    expect(some).toMatchObject([
+      { id: "5", name: "x5" },
+      { id: "50", name: "x50" },
+    ]);
+  });
+  it("finds with filter", async () => {
+    const some = await store.findMany(x => {
+      return Number(x.id) === 3 && x.name === "x3";
+    });
+    expect(some).toMatchObject([{ id: "3", name: "x3" }]);
+  });
+  it("finds nothing", async () => {
+    // empty
+    const { findMany } = createStore<{ id: string }>(
+      "id",
+      sublevel(randomString()),
+    );
+    expect(await findMany("*")).toMatchObject([]);
+    expect(await findMany({})).toMatchObject([]);
+    expect(await findMany({ id: { $gt: "0" } })).toMatchObject([]);
+    expect(await findMany(_ => true)).toMatchObject([]);
   });
 });
