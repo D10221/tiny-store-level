@@ -105,6 +105,28 @@ async function run(level) {
       assert.equal(x.name, `x${one}!`);
     }
     {
+      const one = 9998;
+      time(`findOne:filter:#${one}`);
+      const x = await store
+        .findOne(x => x.id === `indexed${one}`)
+        .then(x => {
+          timeEnd(`findOne:filter:#${one}`);
+          return x;
+        });
+      assert.equal(x.name, `x${one}!`);
+    }
+    {
+      const one = 9997;
+      time(`findOne:query:#${one}`);
+      const x = await store
+        .findOne({ id: { $in: [`indexed${one}`] } })
+        .then(x => {
+          timeEnd(`findOne:query:#${one}`);
+          return x;
+        });
+      assert.equal(x.name, `x${one}!`);
+    }
+    {
       const one = 9999;
       time(`get:#${one}`);
       const x = await store.get(`indexed${one}`).then(x => {

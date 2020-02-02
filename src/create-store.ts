@@ -109,23 +109,33 @@ export default function createStore<T>(
       return Promise.reject(error);
     }
   };
+  const first = <X>(values: X[]): X => values[0];
   /**
    *
    * @param args id or jsonquery
    */
-  const findOne = async (args: T[PK] | Query<Record>) => {
+  const findOne = async (
+    args: string | Query<Record> | ((x: Record) => boolean),
+  ) => {
     try {
       switch (typeof args) {
         case "string":
+          // its an ID
           return level.get(args); //throws ?
+        case "function":
+          return toPromiseOf((prev, next: Record) => {
+            if (args(next)) {
+              prev.push(next);
+              return prev;
+            }
+            return prev;
+          }, [] as Record[])(level.createValueStream()).then(first);
         case "object": {
           //it's aquery
           return toPromiseOf(
             pushRecord,
             [],
-          )(level.createValueStream({ limit: 1 }).pipe(jsonquery(args))).then(
-            values => values[0],
-          );
+          )(level.createValueStream({}).pipe(jsonquery(args))).then(first);
         }
         default:
           return Promise.reject(
@@ -139,7 +149,7 @@ export default function createStore<T>(
     }
   };
   const findMany = (
-    args: "*" | string | Query<Record> | ((x: Record) => Boolean),
+    args: "*" | string | Query<Record> | ((x: Record) => boolean),
   ): Promise<Record[]> => {
     switch (typeof args) {
       case "string": {

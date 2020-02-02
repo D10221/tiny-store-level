@@ -1,5 +1,5 @@
 import { createStore } from "../src";
-import { KeyError } from "../src/internal";
+import { KeyError, isNotFoundError, isNullOrUndefined } from "../src/internal";
 import { sublevel } from "./level";
 
 function randomString(length = 16, enc = "hex") {
@@ -36,26 +36,6 @@ describe("ids", () => {
 });
 
 describe("Level Store", () => {
-  // ...
-  it("finds nothing", async () => {
-    const store = createStore<WithID<{}>>("id", sublevel(randomString()));
-    const x = await store.findMany("*");
-    expect(x).toMatchObject([]);
-  });
-
-  it("is not found error", async () => {
-    const store = createStore<WithID<{ name: string }>>(
-      "id",
-      sublevel(randomString()),
-    );
-    const id = randomString();
-    const aName = randomString();
-    await store.add({ id, name: aName });
-    await store.remove(id);
-    const found = await store.findOne(id).catch(e => e);
-    expect(found).toBeInstanceOf(Error);
-    expect((found as Error).name === "NotFoundError").toBe(true);
-  });
   it("Updates: keeps other values", async () => {
     const store = createStore<WithID<{ name: string; xyz: string }>>(
       "id",
@@ -149,7 +129,7 @@ describe("accepts, configuration", () => {
 });
 function* range(from: number, to: number) {
   while (from <= to) {
-    yield (from += 1);
+    yield from++;
   }
 }
 const fromRange = (from: number, to: number) => Array.from(range(from, to));
@@ -194,5 +174,49 @@ describe("findMany", () => {
     expect(await findMany({})).toMatchObject([]);
     expect(await findMany({ id: { $gt: "0" } })).toMatchObject([]);
     expect(await findMany(_ => true)).toMatchObject([]);
+  });
+});
+describe("findOne", () => {
+  const store = createStore<WithID<{ name: string }>>(
+    "id",
+    sublevel(randomString()),
+  );
+  beforeAll(async () => {
+    await store.batch(
+      fromRange(1, 100).map(x => ({
+        key: `${x}`,
+        value: { id: `${x}`, name: `x${x}` },
+        type: "put",
+      })),
+    );
+  });
+  const { findOne } = store;
+  it("is NotFoundError error", async () => {
+    const found = await findOne("101").catch(e => e);
+    expect(found).toBeInstanceOf(Error);
+    expect((found as Error).name === "NotFoundError").toBe(true);
+    expect(isNotFoundError(found)).toBe(true);
+  });
+  it("Finds id", async () => {
+    const found = await findOne("7").catch(e => e);
+    expect(found).toMatchObject({ id: "7", name: "x7" });
+  });
+  it("Finds Query", async () => {
+    const found = await findOne({ id: { $in: ["7"] } }).catch(e => e);
+    expect(found).toMatchObject({ id: "7", name: "x7" });
+  });
+  it("Finds filter", async () => {
+    const found = await findOne(x => x.id === "7" && x.name === "x7");
+    expect(found).toMatchObject({ id: "7", name: "x7" });
+  });
+  it("finds Nothing (Query)", async () => {
+    const found = await findOne({ id: { $in: ["1000"] } });
+    expect(found === null || found === undefined).toBe(true);
+    expect(isNullOrUndefined(found)).toBe(true);
+  });
+  it("finds Nothing (Filter)", async () => {
+    const found = await findOne(x => x.id === "1000");
+    expect(found === null || found === undefined).toBe(true);
+    expect(isNullOrUndefined(found)).toBe(true);
   });
 });
