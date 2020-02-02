@@ -7,7 +7,6 @@ import {
   RegexLike,
   isNotFoundError,
   isNullOrUndefined,
-  toPromise,
 } from "../src/internal";
 
 function expectValidID(expected: boolean, value: string) {
