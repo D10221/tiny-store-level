@@ -222,6 +222,28 @@ async function run(level) {
       const x = await store.findOne(id);
       assert.equal(x.id, id);
     }
+    {
+      const id = "9998";
+      time(`remove:filter:${id}`);
+      const ret = await store
+        .remove(x => x.id === `indexed${id}`)
+        .then(n => {
+          timeEnd(`remove:filter:${id}`);
+          return n;
+        });
+      assert.equal(ret, 1, `Failed to remove ${id}`);
+    }
+    {
+      const id = "9999";
+      time(`remove:query:${id}`);
+      const ret = await store
+        .remove({ id: { $in: [`indexed${id}`] } })
+        .then(n => {
+          timeEnd(`remove:query:${id}`);
+          return n;
+        });
+      assert.equal(ret, 1, `Failed to remove ${id}`);
+    }
   } catch (error) {
     return Promise.reject(error);
   }
@@ -234,8 +256,8 @@ run(require("./level").sublevel(randomString()))
     timeEnd("run");
     log(require("chalk").green("OK"));
   })
-  .catch(error => {
+  .catch(err => {
     timeEnd("run");
-    error(require("chalk").red(error.message || "Unkown Error"));
+    error(require("chalk").red(err.message || "Unkown Error"));
     process.exit(-1);
   });
