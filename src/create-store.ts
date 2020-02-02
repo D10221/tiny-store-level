@@ -68,7 +68,7 @@ export default function createStore<T>(
       ),
     );
   };
-  /** internal */
+  /** internal? */
   const putRecord = (record: Record) =>
     level.put(record[pkey], {
       ...record,

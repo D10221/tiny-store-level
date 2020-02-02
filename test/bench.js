@@ -129,7 +129,7 @@ async function run(level) {
     assert.equal(ret.length, loopCount);
   }
   {
-    time("store:level:stream");
+    time(`store:level:stream(${loopCount})`);
     const ret = await new Promise((resolve, reject) => {
       const stream = store.createReadStream();
       const result = [];
@@ -143,7 +143,7 @@ async function run(level) {
         reject(error);
       });
     });
-    timeEnd("store:level:stream");
+    timeEnd(`store:level:stream(${loopCount})`);
     assert.equal(ret.length, loopCount);
   }
   {
