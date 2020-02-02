@@ -109,7 +109,6 @@ export default function createStore<T>(
       return Promise.reject(error);
     }
   };
-  const first = <X>(values: X[]): X => values[0];
   /**
    *
    * @param args id or jsonquery
@@ -123,15 +122,22 @@ export default function createStore<T>(
           // its an ID
           return level.get(args); //throws ?
         case "function":
-          return toPromiseOf((prev, next: Record) => {
+          // Its a filter
+          const filter = (prev: Record[], next: Record) => {
             if (args(next)) {
               prev.push(next);
               return prev;
             }
             return prev;
-          }, [] as Record[])(level.createValueStream()).then(first);
+          };
+          const first = <X>(values: X[]): X => values[0];
+          return toPromiseOf(
+            filter,
+            [] as Record[],
+          )(level.createValueStream()).then(first);
         case "object": {
-          //it's aquery
+          //it's a jsonquery
+          const first = <X>(values: X[]): X => values[0];
           return toPromiseOf(
             pushRecord,
             [],
@@ -166,13 +172,14 @@ export default function createStore<T>(
         }
       }
       case "function": {
-        return toPromiseOf((prev, next: Record) => {
+        const filter = (prev: Record[], next: Record) => {
           if (args(next)) {
             prev.push(next);
             return prev;
           }
           return prev;
-        }, [] as Record[])(level.createValueStream());
+        };
+        return toPromiseOf(filter, [] as Record[])(level.createValueStream());
       }
       case "object": {
         return toPromiseOf(
@@ -190,40 +197,75 @@ export default function createStore<T>(
    *
    * @param args id or "*" or jsonquery
    */
-  const remove = async (args: "*" | T[PK] | Query<Record>) => {
-    if (typeof args === "string" && args === "*") {
-      // delete all keys
-      const keys = await toPromiseOf((prev: string[], next: string) => {
-        prev.push(next);
-        return prev;
-      }, [])(level.createKeyStream());
-      await level.clear(); //is it faster to use del?
-      return keys.length;
-    } else if (typeof args === "string") {
-      // its an id
-      if (!(await exists(args))) {
-        return Promise.reject(KeyError.idNotFound(pkey, args));
+  const remove = async (
+    args: "*" | T[PK] | Query<Record> | ((x: Record) => boolean),
+  ) => {
+    try {
+      switch (typeof args) {
+        case "string": {
+          switch (args) {
+            case "*": {
+              // delete all keys
+              const keys = await toPromiseOf(
+                (prev: string[], next: string) => {
+                  prev.push(next);
+                  return prev;
+                },
+                [],
+              )(level.createKeyStream());
+              await level.clear(); //is it faster to use del?
+              return keys.length;
+            }
+            default: {
+              // its an id
+              if (!(await exists(args))) {
+                throw KeyError.idNotFound(pkey, args);
+              }
+              return level.del(args).then(() => 1);
+            }
+          }
+        }
+        case "function": {
+          const filter = (prev: Record[], next: Record) => {
+            if ((args as any)(next)) {
+              // Problems with TK & string ? , TypeScript says it might not be callable
+              prev.push(next);
+              return prev;
+            }
+            return prev;
+          };
+          const values = await toPromiseOf(
+            filter,
+            [],
+          )(level.createValueStream());
+          for (const x of values) {
+            await level.del(x[pkey]);
+          }
+          return values.length;
+        }
+        case "object": {
+          // delete some" criteria based
+          const values = await toPromiseOf(
+            pushRecord,
+            [],
+          )(
+            // needs values to process querie
+            level.createValueStream().pipe(jsonquery(args)),
+          );
+          for (const x of values) {
+            await level.del(x[pkey]);
+          }
+          return values.length;
+        }
+        default: {
+          throw new NotImplementedError(
+            `@args "${args}" of type ${typeof args} is Not Implemented`,
+          );
+        }
       }
-      await level.del(args);
-      return Promise.resolve(1);
-    } else if (typeof args === "object") {
-      // delete some" criteria based
-      const values = await toPromiseOf(
-        pushRecord,
-        [],
-      )(
-        // needs values to process querie
-        level.createValueStream().pipe(jsonquery(args)),
-      );
-      return Promise.all(values.map(x => level.del(x[pkey]))).then(
-        () => values.length,
-      );
-    } else
-      return Promise.reject(
-        new NotImplementedError(
-          `@args "${args}" of type ${typeof args} is Not Implemented`,
-        ),
-      );
+    } catch (error) {
+      return Promise.reject(error);
+    }
   };
   //Attach to instance
   const store = {
@@ -236,6 +278,9 @@ export default function createStore<T>(
     setRecord,
     update,
   };
+  // TODO: add with prototype instead of cheap clone ?
+  // TODO: extra object level.repo?
+  // None of the above ?
   const ret = merge(level, store);
   return ret;
 }

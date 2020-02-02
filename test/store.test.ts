@@ -1,5 +1,10 @@
 import { createStore } from "../src";
-import { KeyError, isNotFoundError, isNullOrUndefined } from "../src/internal";
+import {
+  KeyError,
+  isNotFoundError,
+  isNullOrUndefined,
+  toPromiseOf,
+} from "../src/internal";
 import { sublevel } from "./level";
 
 function randomString(length = 16, enc = "hex") {
@@ -71,48 +76,9 @@ describe("Level Store", () => {
     expect(ret).toBeInstanceOf(KeyError);
     expect(ret.message).toBe(KeyError.invalidOrMissigID("id").message);
   });
-  it("Deletes", async () => {
-    type Target = { name: string; id: string };
-    const store1 = createStore<Target>(
-      "id",
-      sublevel("store1-" + randomString()),
-    );
-    const store2 = createStore<Target>(
-      "id",
-      sublevel("store1-" + randomString()),
-    );
-    await store2.add({ id: randomString(), name: "survive-" + randomString() });
-    // ...
-    expect(await store1.remove("*")).toBe(0);
-    expect(await store1.add({ id: "1", name: "one" })).toBe(undefined);
-    expect(await store1.remove("*")).toBe(1);
-    expect((await store1.findMany("*")).length).toBe(0);
-    expect(await store1.add({ id: "2", name: "two" })).toBe(undefined);
-    expect(await store1.add({ id: "3", name: "three" })).toBe(undefined);
-    expect((await store1.findMany("*")).length).toBe(2);
-    const all = await store1.findMany("*");
-    expect(all.length).toBe(2);
-    expect(await store1.remove("*")).toBe(2);
-    //should not throw key exists
-    expect(await store1.add({ id: "a", name: "aaa" })).toBe(undefined);
-    expect(await store1.add({ id: "b", name: "bbb" })).toBe(undefined);
-    expect((await store1.findMany("*")).length).toBe(2); //all there
-    const r = await store1.findMany({ id: { $in: ["a"] } }); //that one there
-    expect(r[0].id).toBe("a");
-    // should remove exactly 1
-    expect(await store1.remove({ id: { $in: ["a"] } })).toBe(1);
-    expect(await store1.remove({ id: { $in: ["b"] } })).toBe(1);
-    // Should throw Not found if parameter is an ID
-    expect(await store1.findOne("a").catch(e => e.name)).toBe("NotFoundError");
-    // Should Not remove other stores
-    const xxx = await store2.findMany("*");
-    expect(Array.isArray(xxx)).toBe(true);
-    expect(xxx[0] && xxx[0].name && xxx[0].name.startsWith("survive-")).toBe(
-      true,
-    );
-  });
 });
-describe("accepts, configuration", () => {
+
+describe("configuration", () => {
   it("accepts. idTest", async () => {
     const store = createStore<{ id: string }>(
       {
@@ -127,6 +93,7 @@ describe("accepts, configuration", () => {
     await add({ id: "aab" });
   });
 });
+
 function* range(from: number, to: number) {
   while (from <= to) {
     yield from++;
@@ -218,5 +185,67 @@ describe("findOne", () => {
     const found = await findOne(x => x.id === "1000");
     expect(found === null || found === undefined).toBe(true);
     expect(isNullOrUndefined(found)).toBe(true);
+  });
+});
+describe("Remove", () => {
+  const store = createStore<WithID<{ name: string }>>(
+    "id",
+    sublevel(randomString()),
+  );
+  function setup() {
+    return store.batch(
+      fromRange(1, 100).map(x => ({
+        key: `${x}`,
+        value: { id: `${x}`, name: `x${x}` },
+        type: "put",
+      })),
+    );
+  }
+  beforeEach(async () => {
+    await setup();
+  });
+  const { remove } = store;
+  const count = () => toPromiseOf(prev => prev + 1, 0)(store.createKeyStream());
+
+  it("Deletes All", async () => {
+    expect(await remove("*")).toBe(100);
+    expect(await count()).toBe(0);
+  });
+  it("Delets nothing", async () => {
+    await store.clear();
+    expect(await remove("*")).toBe(0);
+  });
+  it("Throws KeyError", async () => {
+    expect(await remove("101").catch(e => e)).toBeInstanceOf(KeyError);
+  });
+  it("Deletes Query", async () => {
+    expect(await remove({ id: { $in: ["1"] } })).toBe(1);
+    expect(await count()).toBe(99);
+    {
+      const errName = await store.get("1").catch(e => e.name);
+      expect(errName).toBe("NotFoundError");
+    }
+    // ...
+    expect(await remove({ id: { $in: ["2"] } })).toBe(1);
+    expect(await count()).toBe(98);
+    {
+      const errName = await store.get("2").catch(e => e.name);
+      expect(errName).toBe("NotFoundError");
+    }
+  });
+  it("Deletes Filter", async () => {
+    expect(await remove(x=>x.id === "1" && x.name === "x1")).toBe(1);
+    expect(await count()).toBe(99);
+    {
+      const errName = await store.get("1").catch(e => e.name);
+      expect(errName).toBe("NotFoundError");
+    }
+    // ...
+    expect(await remove(x=>x.id === "2" && x.name === "x2")).toBe(1);
+    expect(await count()).toBe(98);
+    {
+      const errName = await store.get("2").catch(e => e.name);
+      expect(errName).toBe("NotFoundError");
+    }
   });
 });
