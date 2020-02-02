@@ -2,11 +2,12 @@ import jsonquery, { Query } from "jsonquery";
 import { LevelUp } from "levelup";
 import {
   isNotFoundError,
-  toPromise,
   NotImplementedError,
   isNullOrUndefined,
   isValidID,
   KeyError,
+  toPromiseOf,
+  Reducer,
 } from "./internal";
 // keeps typescript happy, or need to import all level types and re-export them
 const merge = <A, B>(a: A, b: B): A & B => Object.assign(a, b);
@@ -32,8 +33,14 @@ export default function createStore<T>(
           pkey: options,
           idtest: isValidID,
         };
+
   type PK = keyof T & string;
   type Record = { [key in keyof T]: T[key] };
+
+  const pushRecord: Reducer<Record, Record[]> = (prev, next) => {
+    prev.push(next);
+    return prev;
+  };
   /**
    *
    * @param args id or jsonquery
@@ -49,46 +56,17 @@ export default function createStore<T>(
       }
     }
     if (typeof args === "object")
-      return toPromise(
-        level
-          .createReadStream({
-            values: true,
-            keys: false,
-            limit: 1,
-          })
-          .pipe(jsonquery(args)),
-      ).then(x => Boolean(x.length));
+      return toPromiseOf(
+        pushRecord,
+        [] as Record[],
+      )(level.createValueStream().pipe(jsonquery(args))).then(x =>
+        Boolean(x.length),
+      );
     return Promise.reject(
       new NotImplementedError(
         `@args "${args}" of type ${typeof args} is Not Implemented`,
       ),
     );
-  };
-  /**
-   *
-   * @param args id or jsonquery
-   */
-  const findOne = async (args: T[PK] | Query<Record>) => {
-    try {
-      switch (typeof args) {
-        case "string":
-          return level.get(args); //throws ?
-        case "object": {
-          //it's aquery
-          return toPromise<Record>(
-            level.createValueStream({ limit: 1 }).pipe(jsonquery(args)),
-          ).then(values => values[0]);
-        }
-        default:
-          return Promise.reject(
-            new NotImplementedError(
-              `@args "${args}" of type ${typeof args} is Not Implemented`,
-            ),
-          );
-      }
-    } catch (error) {
-      return Promise.reject(error);
-    }
   };
   /** internal */
   const putRecord = (record: Record) =>
@@ -131,11 +109,43 @@ export default function createStore<T>(
       return Promise.reject(error);
     }
   };
+  /**
+   *
+   * @param args id or jsonquery
+   */
+  const findOne = async (args: T[PK] | Query<Record>) => {
+    try {
+      switch (typeof args) {
+        case "string":
+          return level.get(args); //throws ?
+        case "object": {
+          //it's aquery
+          return toPromiseOf(
+            pushRecord,
+            [],
+          )(level.createValueStream({ limit: 1 }).pipe(jsonquery(args))).then(
+            values => values[0],
+          );
+        }
+        default:
+          return Promise.reject(
+            new NotImplementedError(
+              `@args "${args}" of type ${typeof args} is Not Implemented`,
+            ),
+          );
+      }
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  };
   const findMany = (query?: Query<Record>): Promise<Record[]> => {
     if (query) {
-      return toPromise(level.createValueStream().pipe(jsonquery(query)));
+      return toPromiseOf(
+        pushRecord,
+        [] as Record[],
+      )(level.createValueStream().pipe(jsonquery(query)));
     } else {
-      return toPromise(level.createValueStream());
+      return toPromiseOf(pushRecord, [] as Record[])(level.createValueStream());
     }
   };
   /**
@@ -145,7 +155,10 @@ export default function createStore<T>(
   const remove = async (args: "*" | T[PK] | Query<Record>) => {
     if (typeof args === "string" && args === "*") {
       // delete all keys
-      const keys = await toPromise<string>(level.createKeyStream());
+      const keys = await toPromiseOf((prev: string[], next: string) => {
+        prev.push(next);
+        return prev;
+      }, [])(level.createKeyStream());
       await level.clear(); //is it faster to use del?
       return keys.length;
     } else if (typeof args === "string") {
@@ -156,8 +169,11 @@ export default function createStore<T>(
       await level.del(args);
       return Promise.resolve(1);
     } else if (typeof args === "object") {
-      // delete some criteria based
-      const values = await toPromise<Record>(
+      // delete some" criteria based
+      const values = await toPromiseOf(
+        pushRecord,
+        [],
+      )(
         // needs values to process querie
         level.createValueStream().pipe(jsonquery(args)),
       );

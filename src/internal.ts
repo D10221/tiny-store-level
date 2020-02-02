@@ -5,13 +5,16 @@ export const isNullOrUndefined = <T>(
 export function isNotFoundError(error: Error): error is Error {
   return error instanceof Error && error.name === "NotFoundError";
 }
-
-export const toPromise = <X>(stream: NodeJS.ReadableStream) =>
-  new Promise<X[]>((resolve, reject) => {
+export type Reducer<X, R> = (prev: R, next: X) => R;
+/** */
+export const toPromiseOf = <X, R>(reduce: Reducer<X, R>, seed: R) => (
+  stream: NodeJS.ReadableStream,
+) => {
+  return new Promise<R>((resolve, reject) => {
     try {
-      let result: X[] = [];
+      let result = seed;
       stream.on("data", chunk => {
-        result.push(chunk);
+        result = reduce(result, chunk);
       });
       stream.on("error", error => {
         reject(error);
@@ -24,13 +27,12 @@ export const toPromise = <X>(stream: NodeJS.ReadableStream) =>
       reject(error);
     }
   });
-
+};
 export class NotImplementedError extends Error {
   constructor(what: string) {
     super(`"${what}" Not Implemented`);
   }
 }
-
 export class KeyError extends Error {
   constructor(message: string) {
     super(message);
@@ -48,7 +50,6 @@ export class KeyError extends Error {
     return new KeyError(`Key/ID Not Found"${key}=${id}" not found`);
   }
 }
-
 /** a long Value */
 export const ID_MAX_VALUE = String.fromCharCode(0xdbff).repeat(64);
 
@@ -57,7 +58,6 @@ export const ID_REGEX = /^[a-zA-Z0-9]+$/;
 export interface RegexLike {
   test(strng: string): boolean;
 }
-
 export function isValidID(
   x: any,
   regex: RegexLike = ID_REGEX,
