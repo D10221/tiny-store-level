@@ -119,8 +119,10 @@ export default function createStore<T>(
     try {
       switch (typeof args) {
         case "string":
-          // its an ID
-          return level.get(args); //throws ?
+          // ... text query
+          throw new NotImplementedError(
+            `@args "${args}" of type ${typeof args} is Not Implemented`,
+          );
         case "function":
           // Its a filter
           const filter = (prev: Record[], next: Record) => {
@@ -206,13 +208,10 @@ export default function createStore<T>(
           switch (args) {
             case "*": {
               // delete all keys
-              const keys = await toPromiseOf(
-                (prev: string[], next: string) => {
-                  prev.push(next);
-                  return prev;
-                },
-                [],
-              )(level.createKeyStream());
+              const keys = await toPromiseOf((prev: string[], next: string) => {
+                prev.push(next);
+                return prev;
+              }, [])(level.createKeyStream());
               await level.clear(); //is it faster to use del?
               return keys.length;
             }

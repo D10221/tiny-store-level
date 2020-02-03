@@ -28,7 +28,7 @@ async function run(level) {
         id,
       });
       timeEnd("level:put:one");
-      const x = await store.findOne(id);
+      const x = await store.get(id);
       assert.equal(x.id, id);
     }
     {
@@ -38,7 +38,7 @@ async function run(level) {
         id,
       });
       timeEnd("store:level:put:one");
-      const x = await store.findOne(id);
+      const x = await store.get(id);
       assert.equal(x.id, id);
     }
     {
@@ -79,31 +79,14 @@ async function run(level) {
       }
       timeEnd(`add:x${loopCount}`);
     }
-    {
-      const one = 9999;
-      time(`findOne:${one}`);
-      const x = await store.findOne(`indexed${one}`).then(x => {
-        timeEnd(`findOne:${one}`);
-        return x;
-      });
-      assert.equal(x.name, `x${one}`);
-    }
+   
     {
       time(`update:x${loopCount}`);
       for (let i = 0; i < loopCount; i++) {
         await store.update({ id: `indexed${i}`, name: `x${i}!` });
       }
       timeEnd(`update:x${loopCount}`);
-    }
-    {
-      const one = 9999;
-      time(`findOne:#${one}`);
-      const x = await store.findOne(`indexed${one}`).then(x => {
-        timeEnd(`findOne:#${one}`);
-        return x;
-      });
-      assert.equal(x.name, `x${one}!`);
-    }
+    }    
     {
       const one = 9998;
       time(`findOne:filter:#${one}`);
@@ -199,7 +182,7 @@ async function run(level) {
         id,
       });
       timeEnd("setRecord:one");
-      const x = await store.findOne(id);
+      const x = await store.get(id);
       assert.equal(x.id, id);
     }
     {
@@ -209,7 +192,7 @@ async function run(level) {
         id,
       });
       timeEnd("level:put:one");
-      const x = await store.findOne(id);
+      const x = await store.get(id);
       assert.equal(x.id, id);
     }
     {
@@ -219,7 +202,7 @@ async function run(level) {
         id,
       });
       timeEnd("store:level:put:one");
-      const x = await store.findOne(id);
+      const x = await store.get(id);
       assert.equal(x.id, id);
     }
     {

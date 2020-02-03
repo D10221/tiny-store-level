@@ -1,7 +1,6 @@
 import { createStore } from "../src";
 import {
-  KeyError,
-  isNotFoundError,
+  KeyError,  
   isNullOrUndefined,
   toPromiseOf,
 } from "../src/internal";
@@ -15,30 +14,6 @@ function randomString(length = 16, enc = "hex") {
 
 type WithID<T> = T & { id: string };
 
-describe("ids", () => {
-  it("rejects existing", async () => {
-    const store = createStore<WithID<{}>>("id", sublevel(randomString()));
-    const id = randomString();
-    await store.add({ id });
-    const x = await store.add({ id }).catch(e => e);
-    expect(x).toBeInstanceOf(KeyError);
-  });
-
-  it("rejects invalid", async () => {
-    const store = createStore<WithID<{}>>("id", sublevel(randomString()));
-    const e = await store.add({ id: "_%$#@" }).catch(x => x);
-    expect(e).toBeInstanceOf(KeyError);
-  });
-
-  it("throws not found", async () => {
-    const store = createStore<WithID<{ name: string }>>(
-      "id",
-      sublevel(randomString()),
-    );
-    const x = await store.findOne("a").catch(error => error);
-    expect(x.name).toBe("NotFoundError");
-  });
-});
 describe("Add", () => {
   const store = createStore<WithID<{ name: string }>>(
     "id",
@@ -213,16 +188,7 @@ describe("findOne", () => {
     );
   });
   const { findOne } = store;
-  it("is NotFoundError error", async () => {
-    const found = await findOne("101").catch(e => e);
-    expect(found).toBeInstanceOf(Error);
-    expect((found as Error).name === "NotFoundError").toBe(true);
-    expect(isNotFoundError(found)).toBe(true);
-  });
-  it("Finds id", async () => {
-    const found = await findOne("7").catch(e => e);
-    expect(found).toMatchObject({ id: "7", name: "x7" });
-  });
+ 
   it("Finds Query", async () => {
     const found = await findOne({ id: { $in: ["7"] } }).catch(e => e);
     expect(found).toMatchObject({ id: "7", name: "x7" });
