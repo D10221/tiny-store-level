@@ -9,8 +9,6 @@ import {
   toPromiseOf,
   Reducer,
 } from "./internal";
-// keeps typescript happy, or need to import all level types and re-export them
-const merge = <A, B>(a: A, b: B): A & B => Object.assign(a, b);
 /**
  *
  */
@@ -68,12 +66,13 @@ export default function createStore<T>(
       ),
     );
   };
-  /** internal? */
+  /** internal */
   const putRecord = (record: Record) =>
     level.put(record[pkey], {
       ...record,
       [pkey]: record[pkey],
     });
+  /** UPSERT */
   async function setRecord(record: Record) {
     try {
       if (isNullOrUndefined(record))
@@ -109,56 +108,8 @@ export default function createStore<T>(
       return Promise.reject(error);
     }
   };
-  /**
-   *
-   * @param args id or jsonquery
-   */
-  const findOne = async (
-    args: string | Query<Record> | ((x: Record) => boolean),
-  ) => {
-    try {
-      switch (typeof args) {
-        case "string":
-          // ... text query
-          throw new NotImplementedError(
-            `@args "${args}" of type ${typeof args} is Not Implemented`,
-          );
-        case "function":
-          // Its a filter
-          const filter = (prev: Record[], next: Record) => {
-            if (args(next)) {
-              prev.push(next);
-              return prev;
-            }
-            return prev;
-          };
-          const first = <X>(values: X[]): X => values[0];
-          return toPromiseOf(
-            filter,
-            [] as Record[],
-          )(level.createValueStream()).then(first);
-        case "object": {
-          //it's a jsonquery
-          const first = <X>(values: X[]): X => values[0];
-          return toPromiseOf(
-            pushRecord,
-            [],
-          )(level.createValueStream({}).pipe(jsonquery(args))).then(first);
-        }
-        default:
-          return Promise.reject(
-            new NotImplementedError(
-              `@args "${args}" of type ${typeof args} is Not Implemented`,
-            ),
-          );
-      }
-    } catch (error) {
-      return Promise.reject(error);
-    }
-  };
-  const findMany = (
-    args: "*" | string | Query<Record> | ((x: Record) => boolean),
-  ): Promise<Record[]> => {
+  type FindArgs = "*" | string | Query<Record> | ((x: Record) => boolean);
+  const find = (args: FindArgs): Promise<Record[]> => {
     switch (typeof args) {
       case "string": {
         switch (args) {
@@ -195,6 +146,12 @@ export default function createStore<T>(
         );
     }
   };
+  /**
+   *
+   * @param args id or jsonquery
+   */
+  const findOne = async (args: FindArgs) =>
+    find(args).then(values => values[0]);
   /**
    *
    * @param args id or "*" or jsonquery
@@ -267,19 +224,29 @@ export default function createStore<T>(
     }
   };
   //Attach to instance
+  const put = level.put.bind(level);
   const store = {
     add,
+    // count?
     exists,
-    findMany,
+    find,
     findOne,
-    putRecord,
+    put: (...args: any[]) => {
+      const [key, value] = args;
+      switch (typeof key) {
+        case "string": {
+          return put(key, value);
+        }
+        case "object": {
+          return putRecord(key);
+        }
+      }
+    },
     remove,
-    setRecord,
+    set: setRecord,
     update,
   };
-  // TODO: add with prototype instead of cheap clone ?
-  // TODO: extra object level.repo?
-  // None of the above ?
-  const ret = merge(level, store);
-  return ret;
+  // keeps typescript happy, or need to import all level types and re-export them
+  const merge = <A, B>(a: A, b: B): A & B => Object.assign(a, b);
+  return merge(level, store);
 }

@@ -155,33 +155,33 @@ async function run(level) {
       assert.equal(ret.length, loopCount);
     }
     {
-      time(`findMany:${loopCount}`);
-      const x = await store.findMany("*");
-      timeEnd(`findMany:${loopCount}`);
+      time(`find:${loopCount}`);
+      const x = await store.find("*");
+      timeEnd(`find:${loopCount}`);
       assert.equal(x.length, loopCount);
     }
     {
-      time("findMany:query");
-      const found = await store.findMany({
+      time("find:query");
+      const found = await store.find({
         name: { $in: ["x9999!"] },
       });
-      timeEnd("findMany:query");
+      timeEnd("find:query");
       assert.equal(found[0].name, "x9999!");
     }
     {
-      time("findMany:filter");
+      time("find:filter");
       const toFind = "x9999!";
-      const found = await store.findMany(x => x.name === toFind);
-      timeEnd("findMany:filter");
+      const found = await store.find(x => x.name === toFind);
+      timeEnd("find:filter");
       assert.equal(found[0].name, toFind);
     }
     {
       const id = randomString();
-      time("setRecord:one");
-      await store.setRecord({
+      time("set:one");
+      await store.set({
         id,
       });
-      timeEnd("setRecord:one");
+      timeEnd("set:one");
       const x = await store.get(id);
       assert.equal(x.id, id);
     }

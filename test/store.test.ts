@@ -131,7 +131,7 @@ function* range(from: number, to: number) {
 }
 const fromRange = (from: number, to: number) => Array.from(range(from, to));
 
-describe("findMany", () => {
+describe("find", () => {
   const store = createStore<{ name: string; id: string }>(
     "id",
     sublevel(randomString()),
@@ -146,31 +146,31 @@ describe("findMany", () => {
     );
   });
   it("Finds All", async () => {
-    expect((await store.findMany("*")).length).toBe(100);
+    expect((await store.find("*")).length).toBe(100);
   });
   it("finds with Query", async () => {
-    const some = await store.findMany({ id: { $in: ["5", "50"] } });
+    const some = await store.find({ id: { $in: ["5", "50"] } });
     expect(some).toMatchObject([
       { id: "5", name: "x5" },
       { id: "50", name: "x50" },
     ]);
   });
   it("finds with filter", async () => {
-    const some = await store.findMany(x => {
+    const some = await store.find(x => {
       return Number(x.id) === 3 && x.name === "x3";
     });
     expect(some).toMatchObject([{ id: "3", name: "x3" }]);
   });
   it("finds nothing", async () => {
     // empty
-    const { findMany } = createStore<{ id: string }>(
+    const { find } = createStore<{ id: string }>(
       "id",
       sublevel(randomString()),
     );
-    expect(await findMany("*")).toMatchObject([]);
-    expect(await findMany({})).toMatchObject([]);
-    expect(await findMany({ id: { $gt: "0" } })).toMatchObject([]);
-    expect(await findMany(_ => true)).toMatchObject([]);
+    expect(await find("*")).toMatchObject([]);
+    expect(await find({})).toMatchObject([]);
+    expect(await find({ id: { $gt: "0" } })).toMatchObject([]);
+    expect(await find(_ => true)).toMatchObject([]);
   });
 });
 describe("findOne", () => {
