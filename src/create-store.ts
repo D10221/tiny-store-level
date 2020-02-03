@@ -225,24 +225,37 @@ export default function createStore<T>(
   };
   //Attach to instance
   const put = level.put.bind(level);
+  // TODO: types
+  const _put = ((...args: any[]) => {
+    switch (typeof args[0]) {
+      case "string": {
+        return put.apply(level, args as any);
+      }
+      case "object": {
+        try {
+          // isRecord
+          const id = args[0][pkey];
+          if (!idtest(id)) {
+            throw KeyError.invalidOrMissigID(pkey, id);
+          }
+          return putRecord(args[0]);
+        } catch (error) {
+          return Promise.reject(error);
+        }
+      }
+      default:
+    }
+  }) as any;
   const store = {
     add,
     // count?
     exists,
     find,
     findOne,
-    put: (...args: any[]) => {
-      const [key, value] = args;
-      switch (typeof key) {
-        case "string": {
-          return put(key, value);
-        }
-        case "object": {
-          return putRecord(key);
-        }
-      }
-    },
+    //
+    put: _put,
     remove,
+    // upsert
     set: setRecord,
     update,
   };

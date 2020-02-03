@@ -1,9 +1,5 @@
 import { createStore } from "../src";
-import {
-  KeyError,  
-  isNullOrUndefined,
-  toPromiseOf,
-} from "../src/internal";
+import { KeyError, isNullOrUndefined, toPromiseOf } from "../src/internal";
 import { sublevel } from "./level";
 
 function randomString(length = 16, enc = "hex") {
@@ -188,7 +184,7 @@ describe("findOne", () => {
     );
   });
   const { findOne } = store;
- 
+
   it("Finds Query", async () => {
     const found = await findOne({ id: { $in: ["7"] } }).catch(e => e);
     expect(found).toMatchObject({ id: "7", name: "x7" });
@@ -268,5 +264,35 @@ describe("Remove", () => {
       const errName = await store.get("2").catch(e => e.name);
       expect(errName).toBe("NotFoundError");
     }
+  });
+});
+describe("put record", () => {
+  const store = createStore<WithID<{ name: string }>>(
+    "id",
+    sublevel(randomString()),
+  );
+  it("works", async () => {
+    store.put("x", "x", {}, (err: any) => {
+      // ...
+    });
+    await store.put("x", "x"); //forward
+    await store.put("x", { id: "x" }); //put record
+    expect(await store.put({}).catch((err: any) => err)).toBeInstanceOf(
+      KeyError,
+    ); //put record fails
+    await new Promise((resolve, reject) => {
+      // forward
+      store.put("x", undefined, (err: any) => {
+        if (err) {
+          if (err.name === "WriteError") {
+            resolve();
+          } else {
+            reject(err);
+          }
+        } else {
+          resolve();
+        }
+      });
+    });
   });
 });
