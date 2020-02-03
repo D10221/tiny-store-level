@@ -39,7 +39,46 @@ describe("ids", () => {
     expect(x.name).toBe("NotFoundError");
   });
 });
-
+describe("Add", () => {
+  const store = createStore<WithID<{ name: string }>>(
+    "id",
+    sublevel(randomString()),
+  );
+  beforeAll(async () => {
+    await store.batch([
+      { key: "1", value: { id: "1", name: "one" }, type: "put" },
+    ]);
+  });
+  it("adds id", async () => {
+    await store.add({ id: "2", name: "two" });
+    expect(await store.get("2")).toMatchObject({
+      id: "2",
+      name: "two",
+    });
+  });
+  it("rejects existing id", async () => {
+    expect(
+      await store.add({ id: "1", name: "!" }).catch(e => e),
+    ).toBeInstanceOf(Error);
+  });
+  it("rejects missing or bad id", async () => {
+    expect(
+      await store.add({ id: undefined as any, name: "xxx" }).catch(e => e),
+    ).toBeInstanceOf(KeyError);
+    expect(
+      await store.add({ id: null as any, name: "xxx" }).catch(e => e),
+    ).toBeInstanceOf(KeyError);
+    expect(
+      await store.add({ id: ([] as any) as any, name: "xxx" }).catch(e => e),
+    ).toBeInstanceOf(KeyError);
+    expect(
+      await store.add({ id: ({} as any) as any, name: "xxx" }).catch(e => e),
+    ).toBeInstanceOf(KeyError);
+    expect(
+      await store.add({ id: "$$$", name: "xxx" }).catch(e => e),
+    ).toBeInstanceOf(KeyError);
+  });
+});
 describe("Updates", () => {
   const store = createStore<WithID<{ name: string; xyz: string }>>(
     "id",
@@ -76,27 +115,21 @@ describe("Updates", () => {
     expect(
       await store
         .update({
-          id: "*&%$#"
+          id: "*&%$#",
         })
         .catch(x => x),
     ).toBeInstanceOf(KeyError);
   });
   it("rejects invalid payload", async () => {
     expect(
-      await store
-        .update(undefined as any)
-        .catch((x: any) => x),
+      await store.update(undefined as any).catch((x: any) => x),
     ).toBeInstanceOf(Error);
-    expect(
-      await store
-        .update(null as any)
-        .catch((x: any) => x),
-    ).toBeInstanceOf(Error);
-    expect(
-      await store
-        .update([] as any)
-        .catch((x: any) => x),
-    ).toBeInstanceOf(KeyError);
+    expect(await store.update(null as any).catch((x: any) => x)).toBeInstanceOf(
+      Error,
+    );
+    expect(await store.update([] as any).catch((x: any) => x)).toBeInstanceOf(
+      KeyError,
+    );
   });
 });
 
