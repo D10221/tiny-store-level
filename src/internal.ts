@@ -1,3 +1,6 @@
+export function isFunction(x: any): x is Function {
+  return typeof x === "function";
+}
 export const isNullOrUndefined = <T>(
   x: T | null | undefined,
 ): x is null | undefined => x === null || x === undefined;

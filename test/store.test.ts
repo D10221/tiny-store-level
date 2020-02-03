@@ -1,5 +1,5 @@
 import { createStore } from "../src";
-import { KeyError, isNullOrUndefined, toPromiseOf } from "../src/internal";
+import { KeyError, isNullOrUndefined, toPromiseOf, NotImplementedError } from "../src/internal";
 import { sublevel } from "./level";
 
 function randomString(length = 16, enc = "hex") {
@@ -272,27 +272,22 @@ describe("put record", () => {
     sublevel(randomString()),
   );
   it("works", async () => {
-    store.put("x", "x", {}, (err: any) => {
-      // ...
-    });
-    await store.put("x", "x"); //forward
     await store.put("x", { id: "x" }); //put record
-    expect(await store.put({}).catch((err: any) => err)).toBeInstanceOf(
+  });
+  it("reject missing id", async () => {
+    expect(await store.put({} as any).catch((err: any) => err)).toBeInstanceOf(
       KeyError,
     ); //put record fails
-    await new Promise((resolve, reject) => {
-      // forward
-      store.put("x", undefined, (err: any) => {
-        if (err) {
-          if (err.name === "WriteError") {
-            resolve();
-          } else {
-            reject(err);
-          }
-        } else {
-          resolve();
-        }
-      });
-    });
-  });
+  })
+  it("reject bad payload", async () => {
+    const x = await new Promise(resolve => store.put("", "", resolve));
+    expect(x).toBeInstanceOf(Error);
+  })
+  it("forwards params", async () => {
+    await new Promise((resolve) => store.put("x", { id: "xxx" }, resolve));
+    await new Promise((resolve) => store.put("x", { id: "xxx" }, {}, resolve));
+  })
+  it("Fails params", async () => {
+    expect(() => store.put(undefined as any)).toThrow(NotImplementedError);
+  })
 });

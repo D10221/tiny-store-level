@@ -8,7 +8,9 @@ import {
   KeyError,
   toPromiseOf,
   Reducer,
+  isFunction,
 } from "./internal";
+import { AbstractOptions } from "abstract-leveldown";
 /**
  *
  */
@@ -16,21 +18,21 @@ export default function createStore<T>(
   options:
     | (keyof T & string)
     | {
-        pkey: keyof T & string;
-        idtest?: (x: T[keyof T] | undefined) => boolean;
-      },
+      pkey: keyof T & string;
+      idtest?: (x: T[keyof T] | undefined) => boolean;
+    },
   level: LevelUp,
 ) {
   const { pkey, idtest } =
     typeof options === "object"
       ? {
-          idtest: isValidID,
-          ...options,
-        }
+        idtest: isValidID,
+        ...options,
+      }
       : {
-          pkey: options,
-          idtest: isValidID,
-        };
+        pkey: options,
+        idtest: isValidID,
+      };
 
   type PK = keyof T & string;
   type Record = { [key in keyof T]: T[key] };
@@ -40,8 +42,7 @@ export default function createStore<T>(
     return prev;
   };
   /**
-   *
-   * @param args id or jsonquery
+   *   
    */
   const exists = async (args: T[PK] | Query<Record>) => {
     if (typeof args === "string") {
@@ -66,13 +67,17 @@ export default function createStore<T>(
       ),
     );
   };
-  /** internal */
+  /**
+   * internal   
+   */
   const putRecord = (record: Record) =>
     level.put(record[pkey], {
       ...record,
       [pkey]: record[pkey],
     });
-  /** UPSERT */
+  /**
+   * UPSERT   
+   */
   async function setRecord(record: Record) {
     try {
       if (isNullOrUndefined(record))
@@ -84,6 +89,9 @@ export default function createStore<T>(
       return Promise.reject(error);
     }
   }
+  /**
+   * 
+   */
   const add = async (record: Record) => {
     try {
       if (isNullOrUndefined(record))
@@ -96,6 +104,9 @@ export default function createStore<T>(
       return Promise.reject(error);
     }
   };
+  /**
+   * 
+   */
   const update = async (record: Partial<Record>): Promise<void> => {
     try {
       if (isNullOrUndefined(record))
@@ -109,6 +120,9 @@ export default function createStore<T>(
     }
   };
   type FindArgs = "*" | string | Query<Record> | ((x: Record) => boolean);
+  /**
+   *    
+   */
   const find = (args: FindArgs): Promise<Record[]> => {
     switch (typeof args) {
       case "string": {
@@ -148,13 +162,11 @@ export default function createStore<T>(
   };
   /**
    *
-   * @param args id or jsonquery
    */
   const findOne = async (args: FindArgs) =>
-    find(args).then(values => values[0]);
+    find(args).then(values => values && values[0]);
   /**
-   *
-   * @param args id or "*" or jsonquery
+   *   
    */
   const remove = async (
     args: "*" | T[PK] | Query<Record> | ((x: Record) => boolean),
@@ -223,39 +235,60 @@ export default function createStore<T>(
       return Promise.reject(error);
     }
   };
-  //Attach to instance
+  type ErrorCallback = (err: Error | undefined) => any
+  //original func
   const put = level.put.bind(level);
   // TODO: types
-  const _put = ((...args: any[]) => {
-    switch (typeof args[0]) {
-      case "string": {
-        return put.apply(level, args as any);
-      }
-      case "object": {
-        try {
-          // isRecord
-          const id = args[0][pkey];
-          if (!idtest(id)) {
-            throw KeyError.invalidOrMissigID(pkey, id);
+  const _put:
+    ((key: string, value: Record, callback: ErrorCallback) => void) &
+    ((key: string, value: Record, options: AbstractOptions, callback: ErrorCallback) => void) &
+    ((key: string, value: Record, options?: AbstractOptions) => Promise<void>) &
+    ((record: Record) => Promise<void>) = (...args: any) => {
+      const [key, value, ...options] = args;
+      switch (typeof key) {
+        case "string": {
+          const reject = (error: any) => {
+            if (options) {
+              const callback = options.find(isFunction);
+              if (typeof callback === "function") {
+                callback(error);
+              } else {
+                throw error;
+              }
+            }
+            return error
           }
-          return putRecord(args[0]);
-        } catch (error) {
-          return Promise.reject(error);
+          if (!idtest(key as any)) {
+            return reject(KeyError.invalidOrMissigID(pkey, key));
+          }
+          if (typeof value !== "object") {
+            return reject(new Error("value must be a record:{}"))
+          }
+          value[pkey] = key;
+          return put(key, value, ...options);
         }
+        case "object": {
+          try {
+            // isRecord
+            const id = key[pkey];
+            if (!idtest(id)) {
+              throw KeyError.invalidOrMissigID(pkey, id);
+            }
+            return putRecord(key);
+          } catch (error) {
+            return Promise.reject(error);
+          }
+        }
+        default: throw new NotImplementedError(`put args "${args}" of type ${typeof key} is not Implemented`);
       }
-      default:
-    }
-  }) as any;
+    };
   const store = {
     add,
-    // count?
     exists,
     find,
     findOne,
-    //
     put: _put,
     remove,
-    // upsert
     set: setRecord,
     update,
   };
