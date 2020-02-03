@@ -15,7 +15,7 @@
     "build": "rimraf dist && microbundle --external crypto,stream,jsonquery -f cjs",
     "-prepublish": "yarn build && yarn test && yarn pretty",
     "flame": "cross-env NODE_ENV=production 0x -o test/bench.js --silent",
-    "bench": "cross-env NODE_ENV=prodution && node test/bench.js >> bench.console.log",
+    "bench": "cross-env NODE_ENV=prodution && node test/bench.js",
     "coverage": "jest --ci --collect-coverage --runInBand --no-cache "
   },
   "dependencies": {
