@@ -40,41 +40,63 @@ describe("ids", () => {
   });
 });
 
-describe("Level Store", () => {
+describe("Updates", () => {
+  const store = createStore<WithID<{ name: string; xyz: string }>>(
+    "id",
+    sublevel(randomString()),
+  );
+  beforeAll(async () => {
+    await store.batch([
+      { key: "1", value: { id: "1", name: "one", xyz: "x" }, type: "put" },
+      { key: "2", value: { id: "2", name: "two", xyz: "y" }, type: "put" },
+      { key: "3", value: { id: "3", name: "three", xyz: "z" }, type: "put" },
+    ]);
+  });
+
   it("Updates: keeps other values", async () => {
-    const store = createStore<WithID<{ name: string; xyz: string }>>(
-      "id",
-      sublevel(randomString()),
-    );
     {
-      const id = randomString();
-      await store.add({ id, name: "bob", xyz: "z" });
-      expect(await store.findOne(id)).toMatchObject({
-        name: "bob",
-        xyz: "z",
-        id,
-      });
-      await store.update({ id, xyz: "y" }); // same name
-      expect(await store.findOne(id)).toMatchObject({
-        name: "bob",
-        xyz: "y",
-        id,
+      await store.update({ id: "1", xyz: "xx" }); // same name
+      expect(await store.get("1")).toMatchObject({
+        id: "1",
+        name: "one",
+        xyz: "xx",
       });
     }
   });
-  it("Updates: rejects invalid Or missig key", async () => {
-    const store = createStore<{ id: string }>(
-      "id",
-      sublevel("xxx-" + randomString()),
-    );
-    await store.add({ id: "1" });
-    const ret = await store
-      .update({
-        /* NO ID */
-      })
-      .catch(x => x);
-    expect(ret).toBeInstanceOf(KeyError);
-    expect(ret.message).toBe(KeyError.invalidOrMissigID("id").message);
+  it("rejects missig key", async () => {
+    expect(
+      await store
+        .update({
+          /* NO ID */
+        })
+        .catch(x => x),
+    ).toBeInstanceOf(KeyError);
+  });
+  it("rejects invalid key", async () => {
+    expect(
+      await store
+        .update({
+          id: "*&%$#"
+        })
+        .catch(x => x),
+    ).toBeInstanceOf(KeyError);
+  });
+  it("rejects invalid payload", async () => {
+    expect(
+      await store
+        .update(undefined as any)
+        .catch((x: any) => x),
+    ).toBeInstanceOf(Error);
+    expect(
+      await store
+        .update(null as any)
+        .catch((x: any) => x),
+    ).toBeInstanceOf(Error);
+    expect(
+      await store
+        .update([] as any)
+        .catch((x: any) => x),
+    ).toBeInstanceOf(KeyError);
   });
 });
 
@@ -234,14 +256,14 @@ describe("Remove", () => {
     }
   });
   it("Deletes Filter", async () => {
-    expect(await remove(x=>x.id === "1" && x.name === "x1")).toBe(1);
+    expect(await remove(x => x.id === "1" && x.name === "x1")).toBe(1);
     expect(await count()).toBe(99);
     {
       const errName = await store.get("1").catch(e => e.name);
       expect(errName).toBe("NotFoundError");
     }
     // ...
-    expect(await remove(x=>x.id === "2" && x.name === "x2")).toBe(1);
+    expect(await remove(x => x.id === "2" && x.name === "x2")).toBe(1);
     expect(await count()).toBe(98);
     {
       const errName = await store.get("2").catch(e => e.name);
