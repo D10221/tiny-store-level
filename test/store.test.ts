@@ -169,7 +169,7 @@ describe("find", () => {
     expect(await find(_ => true)).toMatchObject([]);
   });
 });
-describe("findOne", () => {
+describe("get", () => {
   const store = createStore<WithID<{ name: string }>>(
     "id",
     sublevel(randomString()),
@@ -183,24 +183,32 @@ describe("findOne", () => {
       })),
     );
   });
-  const { findOne } = store;
+  const { get } = store;
 
-  it("Finds Query", async () => {
-    const found = await findOne({ id: { $in: ["7"] } }).catch(e => e);
+  it("Finds", async () => {
+    const found = await get("7");
     expect(found).toMatchObject({ id: "7", name: "x7" });
   });
-  it("Finds filter", async () => {
-    const found = await findOne(x => x.id === "7" && x.name === "x7");
+  it("Finds (options)", async () => {
+    const found = await get("7", {});
     expect(found).toMatchObject({ id: "7", name: "x7" });
   });
-  it("finds Nothing (Query)", async () => {
-    const found = await findOne({ id: { $in: ["1000"] } });
-    expect(found === null || found === undefined).toBe(true);
-    expect(isNullOrUndefined(found)).toBe(true);
+  it("Finds (options + callback)", async () => {
+    const found = await new Promise((resolve, reject) => get("7", {}, (err, data) => {
+      if (err) reject(err); else resolve(data);
+    }));
+    expect(found).toMatchObject({ id: "7", name: "x7" });
   });
-  it("finds Nothing (Filter)", async () => {
-    const found = await findOne(x => x.id === "1000");
-    expect(found === null || found === undefined).toBe(true);
+  it("finds Nothin", async () => {
+    expect(await get("1000")).toBe(null);
+  });
+  it("finds Nothin (callbak)", async () => {
+    const found = await new Promise((resolve, reject) =>
+      get("1000", (e, data) => { if (e) reject(e); else resolve(data); }));
+    expect(found).toBe(null);
+  });
+  it("finds Nothin (options+callbak)", async () => {
+    const found = await new Promise((resolve, reject) => get("1000", {}, (e, data) => { if (e) reject(e); else resolve(data) }));
     expect(isNullOrUndefined(found)).toBe(true);
   });
 });
@@ -239,30 +247,26 @@ describe("Remove", () => {
     expect(await remove({ id: { $in: ["1"] } })).toBe(1);
     expect(await count()).toBe(99);
     {
-      const errName = await store.get("1").catch(e => e.name);
-      expect(errName).toBe("NotFoundError");
+      expect(await store.get("1")).toBe(null);
     }
     // ...
     expect(await remove({ id: { $in: ["2"] } })).toBe(1);
     expect(await count()).toBe(98);
     {
-      const errName = await store.get("2").catch(e => e.name);
-      expect(errName).toBe("NotFoundError");
+      expect(await store.get("2")).toBe(null);
     }
   });
   it("Deletes Filter", async () => {
     expect(await remove(x => x.id === "1" && x.name === "x1")).toBe(1);
     expect(await count()).toBe(99);
     {
-      const errName = await store.get("1").catch(e => e.name);
-      expect(errName).toBe("NotFoundError");
+      expect(await store.get("1")).toBe(null);
     }
     // ...
     expect(await remove(x => x.id === "2" && x.name === "x2")).toBe(1);
     expect(await count()).toBe(98);
     {
-      const errName = await store.get("2").catch(e => e.name);
-      expect(errName).toBe("NotFoundError");
+      expect(await store.get("2")).toBe(null);
     }
   });
 });

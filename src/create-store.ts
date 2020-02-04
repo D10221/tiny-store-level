@@ -10,7 +10,7 @@ import {
   Reducer,
   isFunction,
 } from "./internal";
-import { AbstractOptions } from "abstract-leveldown";
+import { AbstractOptions, AbstractGetOptions } from "abstract-leveldown";
 /**
  *
  */
@@ -41,13 +41,45 @@ export default function createStore<T>(
     prev.push(next);
     return prev;
   };
+  const get = level.get.bind(level);
+  type ErrorValueCallback = (err: Error | undefined, value: Record | null) => void
+  const _get: (
+    ((key: string, callback: ErrorValueCallback) => void) &
+    ((key: string, options: AbstractGetOptions, callback: ErrorValueCallback) => void) &
+    ((key: string, options?: AbstractGetOptions) => Promise<Record | null>)
+  ) = async (...args: any[]) => {
+    const [key, ...options] = args;
+    const callback = options.find(isFunction);
+    if (callback) {
+      return get(key, options, (err, val) => {
+        if (err) {
+          if (isNotFoundError(err)) {
+            callback(undefined, null);
+          } else {
+            callback(err, null);
+          }
+        } else {
+          callback(err, val);
+        }
+      });
+    } else {
+      try {
+        const x = await get(key, ...options);
+        return x;
+      } catch (error) {
+        if (isNotFoundError(error)) {
+          return null;
+        }
+      }
+    }
+  }
   /**
    *   
    */
   const exists = async (args: T[PK] | Query<Record>) => {
     if (typeof args === "string") {
       try {
-        await level.get(args);
+        await get(args);
         return true;
       } catch (error) {
         if (isNotFoundError(error)) return false;
@@ -113,7 +145,7 @@ export default function createStore<T>(
         throw new Error("@arg record cannot be null|undefined");
       const id = record[pkey];
       if (!idtest(id)) throw KeyError.invalidOrMissigID(pkey, id);
-      const prev = await level.get(id);
+      const prev = await get(id);
       return putRecord({ ...prev, ...record });
     } catch (error) {
       return Promise.reject(error);
@@ -160,11 +192,6 @@ export default function createStore<T>(
         );
     }
   };
-  /**
-   *
-   */
-  const findOne = async (args: FindArgs) =>
-    find(args).then(values => values && values[0]);
   /**
    *   
    */
@@ -286,7 +313,7 @@ export default function createStore<T>(
     add,
     exists,
     find,
-    findOne,
+    get: _get,
     put: _put,
     remove,
     set: setRecord,

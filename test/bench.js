@@ -78,37 +78,14 @@ async function run(level) {
         await store.add({ id: `indexed${i}`, name: `x${i}` });
       }
       timeEnd(`add:x${loopCount}`);
-    }
-   
+    }   
     {
       time(`update:x${loopCount}`);
       for (let i = 0; i < loopCount; i++) {
         await store.update({ id: `indexed${i}`, name: `x${i}!` });
       }
       timeEnd(`update:x${loopCount}`);
-    }    
-    {
-      const one = 9998;
-      time(`findOne:filter:#${one}`);
-      const x = await store
-        .findOne(x => x.id === `indexed${one}`)
-        .then(x => {
-          timeEnd(`findOne:filter:#${one}`);
-          return x;
-        });
-      assert.equal(x.name, `x${one}!`);
-    }
-    {
-      const one = 9997;
-      time(`findOne:query:#${one}`);
-      const x = await store
-        .findOne({ id: { $in: [`indexed${one}`] } })
-        .then(x => {
-          timeEnd(`findOne:query:#${one}`);
-          return x;
-        });
-      assert.equal(x.name, `x${one}!`);
-    }
+    }           
     {
       const one = 9999;
       time(`get:#${one}`);
