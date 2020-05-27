@@ -11,7 +11,7 @@
     "esModuleInterop": true,
     "preserveSymlinks": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true    
+    "emitDecoratorMetadata": true
   },
   "include": ["src"]
 }

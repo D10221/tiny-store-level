@@ -1,7 +1,4 @@
-import {
-  isValidID,
-  ID_MAX_VALUE,  
-} from "../src/internal";
+import { isValidID, ID_MAX_VALUE } from "../src/internal";
 
 function expectValidID(expected: boolean, value: string) {
   if (isValidID(value) !== expected) {
@@ -59,7 +56,7 @@ describe("isValidID", () => {
     expect(isValidID(undefined)).toBe(false);
     expect(isValidID(1)).toBe(false);
     expect(isValidID({})).toBe(false);
-    expect(isValidID(function() {})).toBe(false);
+    expect(isValidID(function () {})).toBe(false);
   });
 
   it("maxPrimaryKeyValue", () => {

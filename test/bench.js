@@ -2,9 +2,7 @@ const { createStore } = require("../");
 const assert = require("assert");
 
 function randomString(length = 16, enc = "hex") {
-  return require("crypto")
-    .randomBytes(length)
-    .toString(enc);
+  return require("crypto").randomBytes(length).toString(enc);
 }
 
 const noop = () => {};
@@ -78,18 +76,18 @@ async function run(level) {
         await store.add({ id: `indexed${i}`, name: `x${i}` });
       }
       timeEnd(`add:x${loopCount}`);
-    }   
+    }
     {
       time(`update:x${loopCount}`);
       for (let i = 0; i < loopCount; i++) {
         await store.update({ id: `indexed${i}`, name: `x${i}!` });
       }
       timeEnd(`update:x${loopCount}`);
-    }           
+    }
     {
       const one = 9999;
       time(`get:#${one}`);
-      const x = await store.get(`indexed${one}`).then(x => {
+      const x = await store.get(`indexed${one}`).then((x) => {
         timeEnd(`get:#${one}`);
         return x;
       });
@@ -100,13 +98,13 @@ async function run(level) {
       const ret = await new Promise((resolve, reject) => {
         const stream = level.createReadStream();
         const result = [];
-        stream.on("data", data => {
+        stream.on("data", (data) => {
           result.push(data);
         });
         stream.on("end", () => {
           resolve(result);
         });
-        stream.on("error", error => {
+        stream.on("error", (error) => {
           reject(error);
         });
       });
@@ -118,13 +116,13 @@ async function run(level) {
       const ret = await new Promise((resolve, reject) => {
         const stream = store.createReadStream();
         const result = [];
-        stream.on("data", data => {
+        stream.on("data", (data) => {
           result.push(data);
         });
         stream.on("end", () => {
           resolve(result);
         });
-        stream.on("error", error => {
+        stream.on("error", (error) => {
           reject(error);
         });
       });
@@ -148,7 +146,7 @@ async function run(level) {
     {
       time("find:filter");
       const toFind = "x9999!";
-      const found = await store.find(x => x.name === toFind);
+      const found = await store.find((x) => x.name === toFind);
       timeEnd("find:filter");
       assert.equal(found[0].name, toFind);
     }
@@ -186,8 +184,8 @@ async function run(level) {
       const id = "9998";
       time(`remove:filter:${id}`);
       const ret = await store
-        .remove(x => x.id === `indexed${id}`)
-        .then(n => {
+        .remove((x) => x.id === `indexed${id}`)
+        .then((n) => {
           timeEnd(`remove:filter:${id}`);
           return n;
         });
@@ -198,7 +196,7 @@ async function run(level) {
       time(`remove:query:${id}`);
       const ret = await store
         .remove({ id: { $in: [`indexed${id}`] } })
-        .then(n => {
+        .then((n) => {
           timeEnd(`remove:query:${id}`);
           return n;
         });
@@ -216,7 +214,7 @@ run(require("./level").sublevel(randomString()))
     timeEnd("run");
     log(require("chalk").green("OK"));
   })
-  .catch(err => {
+  .catch((err) => {
     timeEnd("run");
     error(require("chalk").red(err.message || "Unkown Error"));
     process.exit(-1);

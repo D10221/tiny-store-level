@@ -27,10 +27,10 @@ export const toPromiseOf = <X, R>(reduce: Reducer<X, R>, seed: R) => (
   return new Promise<R>((resolve, reject) => {
     try {
       let result = seed;
-      stream.on("data", chunk => {
+      stream.on("data", (chunk) => {
         result = reduce(result, chunk);
       });
-      stream.on("error", error => {
+      stream.on("error", (error) => {
         reject(error);
       });
       stream.on("end", () => {

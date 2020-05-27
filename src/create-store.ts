@@ -90,7 +90,7 @@ export default function createStore<T>(
   /**
    *
    */
-  const exists: Exists<T> = async args => {
+  const exists: Exists<T> = async (args) => {
     if (typeof args === "string") {
       try {
         await get(args);
@@ -104,7 +104,7 @@ export default function createStore<T>(
       return toPromiseOf(
         pushRecord,
         [] as Record[],
-      )(level.createValueStream().pipe(jsonquery(args))).then(x =>
+      )(level.createValueStream().pipe(jsonquery(args))).then((x) =>
         Boolean(x.length),
       );
     return Promise.reject(
@@ -138,7 +138,7 @@ export default function createStore<T>(
   /**
    *
    */
-  const add: Add<T> = async record => {
+  const add: Add<T> = async (record) => {
     try {
       if (isNullOrUndefined(record))
         throw new Error("@arg record cannot be null|undefined");
@@ -153,7 +153,7 @@ export default function createStore<T>(
   /**
    *
    */
-  const update: Update<T> = async record => {
+  const update: Update<T> = async (record) => {
     try {
       if (isNullOrUndefined(record))
         throw new Error("@arg record cannot be null|undefined");
@@ -168,7 +168,7 @@ export default function createStore<T>(
   /**
    *
    */
-  const find: Find<T> = args => {
+  const find: Find<T> = (args) => {
     switch (typeof args) {
       case "string": {
         switch (args) {

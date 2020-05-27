@@ -2,7 +2,6 @@ import createStore from "../src";
 import { sublevel } from "./level";
 import { randomString } from "./util";
 describe("create store", () => {
-  
   test("level, id => store", () => {
     const level = sublevel(randomString());
     const store = createStore<{ id: string }>(level, "id");
@@ -22,7 +21,7 @@ describe("create store", () => {
   });
   test("id =>  level => store", () => {
     const level = sublevel(randomString());
-    const store = createStore<{ id: string }>("id")(level);    
+    const store = createStore<{ id: string }>("id")(level);
     expect(store.type).toBe("StoreOf<levelup,id>");
   });
   test("id , options => level => store ", () => {
@@ -35,7 +34,7 @@ describe("create store", () => {
   test("no args", () => {
     const level = sublevel(randomString());
     const mkStore = createStore();
-    const store = mkStore(level)<{ id: string }>("id", { idtest: () => true })
+    const store = mkStore(level)<{ id: string }>("id", { idtest: () => true });
     expect(store.type).toBe("StoreOf<levelup,id>");
   });
 });
