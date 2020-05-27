@@ -1,6 +1,6 @@
 {
   "name": "@d10221/tiny-store-level",
-  "version": "1.0.0-alpha.4",
+  "version": "1.0.0-alpha.5",
   "description": "tiny-store level-db implementaion of Store<T>",
   "license": "MIT",
   "private": false,
