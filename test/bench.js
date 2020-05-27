@@ -19,7 +19,7 @@ async function run(level) {
   try {
     const loopCount = 10000;
 
-    const store = createStore("id", level);
+    const store = createStore(level, "id");
     /** Warmup */
     {
       const id = randomString();

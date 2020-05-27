@@ -1,6 +1,17 @@
+export const typePrefix = "StoreOf";
+
+export function subType(type: any, pkey: any) {
+  return `${typePrefix}<${type},${pkey}>`;
+}
+
+export function getType(level: any): any {
+  return (level as any).type;
+}
+
 export function isFunction(x: any): x is Function {
   return typeof x === "function";
 }
+
 export const isNullOrUndefined = <T>(
   x: T | null | undefined,
 ): x is null | undefined => x === null || x === undefined;

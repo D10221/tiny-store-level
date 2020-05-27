@@ -1,19 +1,19 @@
-import { createStore } from "../src";
-import { KeyError, isNullOrUndefined, toPromiseOf, NotImplementedError } from "../src/internal";
-import { sublevel } from "./level";
+import createStore from "../src";
+import {
+  KeyError,
+  isNullOrUndefined,
+  toPromiseOf,
+  NotImplementedError,
+} from "../src/internal"
 
-function randomString(length = 16, enc = "hex") {
-  return require("crypto")
-    .randomBytes(length)
-    .toString(enc);
-}
+import { sublevel } from "./level";
+import { randomString } from "./util";
 
 type WithID<T> = T & { id: string };
 
 describe("Add", () => {
-  const store = createStore<WithID<{ name: string }>>(
+  const store = createStore(sublevel(randomString()))<WithID<{ name: string }>>(
     "id",
-    sublevel(randomString()),
   );
   beforeAll(async () => {
     await store.batch([
@@ -51,8 +51,7 @@ describe("Add", () => {
   });
 });
 describe("Updates", () => {
-  const store = createStore<WithID<{ name: string; xyz: string }>>(
-    "id",
+  const store = createStore<WithID<{ name: string; xyz: string }>>("id")(
     sublevel(randomString()),
   );
   beforeAll(async () => {
@@ -106,13 +105,9 @@ describe("Updates", () => {
 
 describe("configuration", () => {
   it("accepts. idTest", async () => {
-    const store = createStore<{ id: string }>(
-      {
-        pkey: "id",
-        idtest: x => x !== "aaa",
-      },
-      sublevel(randomString()),
-    );
+    const store = createStore<{ id: string }>(sublevel(randomString()), "id", {
+      idtest: x => x !== "aaa",
+    });
     const { add } = store;
     const err = await add({ id: "aaa" }).catch(e => e);
     expect(err).toBeInstanceOf(KeyError);
@@ -128,10 +123,9 @@ function* range(from: number, to: number) {
 const fromRange = (from: number, to: number) => Array.from(range(from, to));
 
 describe("find", () => {
-  const store = createStore<{ name: string; id: string }>(
-    "id",
-    sublevel(randomString()),
-  );
+  const store = createStore<{ name: string; id: string }>("id", {
+    idtest: () => true,
+  })(sublevel(randomString()));
   beforeAll(async () => {
     await store.batch(
       fromRange(1, 100).map(x => ({
@@ -160,8 +154,9 @@ describe("find", () => {
   it("finds nothing", async () => {
     // empty
     const { find } = createStore<{ id: string }>(
-      "id",
       sublevel(randomString()),
+      "id",
+      { idtest: () => true },
     );
     expect(await find("*")).toMatchObject([]);
     expect(await find({})).toMatchObject([]);
@@ -170,8 +165,7 @@ describe("find", () => {
   });
 });
 describe("get", () => {
-  const store = createStore<WithID<{ name: string }>>(
-    "id",
+  const store = createStore<WithID<{ name: string }>>("id")(
     sublevel(randomString()),
   );
   beforeAll(async () => {
@@ -194,9 +188,12 @@ describe("get", () => {
     expect(found).toMatchObject({ id: "7", name: "x7" });
   });
   it("Finds (options + callback)", async () => {
-    const found = await new Promise((resolve, reject) => get("7", {}, (err, data) => {
-      if (err) reject(err); else resolve(data);
-    }));
+    const found = await new Promise((resolve, reject) =>
+      get("7", {}, (err, data) => {
+        if (err) reject(err);
+        else resolve(data);
+      }),
+    );
     expect(found).toMatchObject({ id: "7", name: "x7" });
   });
   it("finds Nothin", async () => {
@@ -204,17 +201,25 @@ describe("get", () => {
   });
   it("finds Nothin (callbak)", async () => {
     const found = await new Promise((resolve, reject) =>
-      get("1000", (e, data) => { if (e) reject(e); else resolve(data); }));
+      get("1000", (e, data) => {
+        if (e) reject(e);
+        else resolve(data);
+      }),
+    );
     expect(found).toBe(null);
   });
   it("finds Nothin (options+callbak)", async () => {
-    const found = await new Promise((resolve, reject) => get("1000", {}, (e, data) => { if (e) reject(e); else resolve(data) }));
+    const found = await new Promise((resolve, reject) =>
+      get("1000", {}, (e, data) => {
+        if (e) reject(e);
+        else resolve(data);
+      }),
+    );
     expect(isNullOrUndefined(found)).toBe(true);
   });
 });
 describe("Remove", () => {
-  const store = createStore<WithID<{ name: string }>>(
-    "id",
+  const store = createStore<WithID<{ name: string }>>("id")(
     sublevel(randomString()),
   );
   function setup() {
@@ -272,8 +277,8 @@ describe("Remove", () => {
 });
 describe("put record", () => {
   const store = createStore<WithID<{ name: string }>>(
-    "id",
     sublevel(randomString()),
+    "id",
   );
   it("works", async () => {
     await store.put("x", { id: "x" }); //put record
@@ -282,16 +287,16 @@ describe("put record", () => {
     expect(await store.put({} as any).catch((err: any) => err)).toBeInstanceOf(
       KeyError,
     ); //put record fails
-  })
+  });
   it("reject bad payload", async () => {
     const x = await new Promise(resolve => store.put("", "", resolve));
     expect(x).toBeInstanceOf(Error);
-  })
+  });
   it("forwards params", async () => {
-    await new Promise((resolve) => store.put("x", { id: "xxx" }, resolve));
-    await new Promise((resolve) => store.put("x", { id: "xxx" }, {}, resolve));
-  })
+    await new Promise(resolve => store.put("x", { id: "xxx" }, resolve));
+    await new Promise(resolve => store.put("x", { id: "xxx" }, {}, resolve));
+  });
   it("Fails params", async () => {
     expect(() => store.put(undefined as any)).toThrow(NotImplementedError);
-  })
+  });
 });
