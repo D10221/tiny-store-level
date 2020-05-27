@@ -1,6 +1,17 @@
+export const typePrefix = "StoreOf";
+
+export function subType(type: any, pkey: any) {
+  return `${typePrefix}<${type},${pkey}>`;
+}
+
+export function getType(level: any): any {
+  return (level as any).type;
+}
+
 export function isFunction(x: any): x is Function {
   return typeof x === "function";
 }
+
 export const isNullOrUndefined = <T>(
   x: T | null | undefined,
 ): x is null | undefined => x === null || x === undefined;
@@ -16,10 +27,10 @@ export const toPromiseOf = <X, R>(reduce: Reducer<X, R>, seed: R) => (
   return new Promise<R>((resolve, reject) => {
     try {
       let result = seed;
-      stream.on("data", chunk => {
+      stream.on("data", (chunk) => {
         result = reduce(result, chunk);
       });
-      stream.on("error", error => {
+      stream.on("error", (error) => {
         reject(error);
       });
       stream.on("end", () => {

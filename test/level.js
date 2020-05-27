@@ -8,7 +8,7 @@ const noop = () => {};
 const silent = process.argv.indexOf("--silent") !== -1;
 const log = silent ? noop : console.log.bind(console);
 
-const down = subLevelName => {
+const down = (subLevelName) => {
   if (process.env.LEVELDOWN === "leveldown") {
     log("DOWN: leveldown");
     return leveldown(path.join(__dirname, "../dbs", subLevelName || "testdb"));
@@ -21,7 +21,7 @@ const dbs = {
   default: levelup(down()),
 };
 
-const sublevel = subLevelName => {
+const sublevel = (subLevelName) => {
   switch (process.env.SUBLEVEL) {
     case "multilevel": {
       log("SUBLEVEL: multilevel");

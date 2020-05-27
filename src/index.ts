@@ -1,5 +1,3 @@
-import createStore from "./create-store";
-export default createStore;
-export {
-  createStore
-}
+export * from "./types";
+export { default } from "./store-of";
+export { default as createStore } from "./store-of";

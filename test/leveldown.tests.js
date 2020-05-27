@@ -14,10 +14,9 @@ const subleveldown = require("subleveldown");
 suite({
   test: tape,
   factory: () =>
-    createStore(
-      { pkey: "id", idtest: () => true },
-      subleveldown(encoding(memdown()), "test"),
-    ),
+    createStore(subleveldown(encoding(memdown()), "test"), "id", {
+      idtest: () => true,
+    }),
   // Unsupported features
   seek: false,
   createIfMissing: false,

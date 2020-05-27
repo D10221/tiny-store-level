@@ -1,19 +1,22 @@
 {
   "name": "@d10221/tiny-store-level",
-  "version": "1.0.0-alpha.3",
+  "version": "1.0.0-alpha.5",
   "description": "tiny-store level-db implementaion of Store<T>",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "license": "MIT",
   "private": false,
   "author": "d10221@protonmail.com",
   "repository": "https://github.com/D10221/tiny-store-level.git",
   "homepage": "https://github.com/D10221/tiny-store-level",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esnext/index.js",
+  "types": "dist/esnext/index.d.ts",
   "scripts": {
     "test": "rimraf dbs/ && mkdirp dbs && jest --env=node --ci --silent",
-    "pretty": "prettier src**/*.*  test/**/* *.json *.js *.md --write",
-    "build": "rimraf dist && microbundle --external crypto,stream,jsonquery -f cjs",
-    "-prepublish": "yarn build && yarn test && yarn pretty",
+    "fmt": "prettier src**/*.*  test/**/* *.json *.js *.md --write",
+    "build:cjs": "rimraf dist/cjs && tsc -p .",
+    "build:esnext": "rimraf dist/esnext && tsc -p tsconfig.esnext.json",
+    "build": "rimraf dist && yarn build:cjs && yarn build:esnext",
+    "-prepublish": "yarn build && yarn test && yarn fmt",
     "flame": "cross-env NODE_ENV=production 0x -o test/bench.js --silent",
     "bench": "cross-env NODE_ENV=prodution && node test/bench.js",
     "coverage": "jest --ci --collect-coverage --runInBand --no-cache "
@@ -21,41 +24,34 @@
   "dependencies": {
     "jsonquery": "0.2.0"
   },
-  "peerDependencies": {
-    "encoding-down": "6.3.0",
-    "leveldown": "5.4.1",
-    "levelup": "4.3.2",
-    "memdown": "5.1.0",
-    "subleveldown": "^4.1.4"
-  },
   "devDependencies": {
     "0x": "4.9.1",
     "@types/abstract-leveldown": "5.0.1",
     "@types/encoding-down": "5.0.0",
-    "@types/jest": "24.9.1",
+    "@types/jest": "25.2.3",
     "@types/jsonquery": "0.1.0",
     "@types/leveldown": "4.0.2",
     "@types/levelup": "4.3.0",
     "@types/memdown": "3.0.0",
-    "@types/rimraf": "2.0.3",
-    "@types/subleveldown": "^4.1.0",
-    "cross-env": "7.0.0",
+    "@types/rimraf": "3.0.0",
+    "@types/subleveldown": "4.1.0",
+    "cross-env": "7.0.2",
     "encoding-down": "6.3.0",
-    "jest": "25.1.0",
-    "leveldown": "5.4.1",
-    "levelup": "4.3.2",
+    "jest": "26.0.1",
+    "leveldown": "5.6.0",
+    "levelup": "4.4.0",
     "memdown": "5.1.0",
-    "microbundle": "^0.11.0",
-    "prettier": "1.19.1",
-    "rimraf": "3.0.0",
-    "subleveldown": "^4.1.4",
-    "tape": "^4.13.0",
-    "ts-jest": "25.0.0",
-    "ts-node": "8.6.2",
-    "typescript": "3.7.5"
+    "prettier": "2.0.5",
+    "rimraf": "3.0.2",
+    "subleveldown": "5.0.0",
+    "tape": "5.0.1",
+    "ts-jest": "26.0.0",
+    "ts-node": "8.10.1",
+    "typescript": "3.9.3"
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "test"
   ]
 }
